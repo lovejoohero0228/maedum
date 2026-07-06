@@ -1,14 +1,14 @@
-// Edge Function 공용 헬퍼 — Anthropic/Supabase 클라이언트, JSON 파싱, 푸시 알림
-import Anthropic from "npm:@anthropic-ai/sdk";
+// Edge Function 공용 헬퍼 — OpenAI/Supabase 클라이언트, JSON 파싱, 푸시 알림
+import OpenAI from "npm:openai";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// AGENT.md §1: 모델은 claude-sonnet-4-6
-export const CLAUDE_MODEL = "claude-sonnet-4-6";
+// AI 제공자: OpenAI (원래 AGENT.md §1은 Anthropic Claude였으나 계정 크레딧 문제로 전환)
+export const AI_MODEL = "gpt-4o";
 
-export function anthropicClient(): Anthropic {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  return new Anthropic({ apiKey });
+export function openaiClient(): OpenAI {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+  return new OpenAI({ apiKey });
 }
 
 // service_role 클라이언트 — RLS 우회 (conflict_outputs 쓰기 등 서버 전용 작업)

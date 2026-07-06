@@ -7,10 +7,10 @@
 // 7개 항목이 모두 끝나면 is_complete=TRUE. 상대도 완료면 status='ai_processing'
 // 후 ai-letters를 백그라운드 호출한다.
 import {
-  anthropicClient,
+  openaiClient,
   adminClient,
   userClient,
-  CLAUDE_MODEL,
+  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -102,20 +102,33 @@ Deno.serve(async (req) => {
       ? user_text
       : `(항목 시작) "${field.label}" 항목의 첫 질문을 해주세요.`;
 
-    // 채팅 재질문은 지연이 중요 — thinking 비활성 (claude-api skill 지침 준수)
-    const anthropic = anthropicClient();
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화
+    const openai = openaiClient();
+    const response = await openai.chat.completions.create({
+      model: AI_MODEL,
       max_tokens: 1024,
-      thinking: { type: "disabled" },
-      output_config: { effort: "low" },
-      system,
-      messages: [{ role: "user", content: userMessage }],
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userMessage },
+      ],
     });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") throw new Error("no text in response");
-    const envelope = parseModelJson<GuideEnvelope>(textBlock.text);
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("no content in response");
+    // json_object 모드는 유효한 JSON만 보장할 뿐 스키마 준수는 보장하지 않는다
+    // (OpenAI가 종종 extracted_value/field_complete 같은 키를 통째로 생략함).
+    // 누락된 키는 "아직 완료 안 됨" 쪽으로 안전하게 기본값 처리한다.
+    const raw = parseModelJson<Partial<GuideEnvelope>>(content);
+    const envelope: GuideEnvelope = {
+      type: raw.type ?? "clarify",
+      flag: raw.flag ?? null,
+      flag_text: raw.flag_text ?? null,
+      message: raw.message ?? "",
+      choices: raw.choices ?? null,
+      extracted_value: raw.extracted_value ?? null,
+      field_complete: raw.field_complete ?? false,
+    };
 
     // 대화 로그 누적
     if (user_text) chatLog.push({ role: "user", field: field_key, content: user_text });

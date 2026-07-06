@@ -3,10 +3,10 @@
 // 요청: { conflict_id }
 // → mission_a/b + convo_guide 생성 → conflict_outputs 갱신 → status 'mission_unlocked' → 푸시
 import {
-  anthropicClient,
+  openaiClient,
   adminClient,
   userClient,
-  CLAUDE_MODEL,
+  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -101,18 +101,28 @@ Deno.serve(async (req) => {
       2,
     );
 
-    const anthropic = anthropicClient();
-    const res = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    const openai = openaiClient();
+    const res = await openai.chat.completions.create({
+      model: AI_MODEL,
       max_tokens: 4096,
-      thinking: { type: "adaptive" },
-      system: MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context),
-      messages: [{ role: "user", content: "화해 미션 페이퍼를 생성해주세요." }],
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context) },
+        { role: "user", content: "화해 미션 페이퍼를 생성해주세요." },
+      ],
     });
 
-    const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") throw new Error("no mission text");
-    const mission = parseModelJson<MissionResult>(block.text);
+    const content = res.choices[0]?.message?.content;
+    if (!content) throw new Error("no mission text");
+    const mission = parseModelJson<Partial<MissionResult>>(content);
+    // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 필드 누락을 명시적으로 검증
+    if (
+      !Array.isArray(mission.mission_a) ||
+      !Array.isArray(mission.mission_b) ||
+      !Array.isArray(mission.convo_guide)
+    ) {
+      throw new Error(`mission response missing required arrays: ${JSON.stringify(mission)}`);
+    }
 
     const { error: updateError } = await admin
       .from("conflict_outputs")

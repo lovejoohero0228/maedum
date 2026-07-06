@@ -6,9 +6,9 @@
 // 3. 분석: 양쪽 입력 모두로 중재자 분석
 // → conflict_outputs 저장 → status 'letters_delivered' → 양쪽 푸시
 import {
-  anthropicClient,
+  openaiClient,
   adminClient,
-  CLAUDE_MODEL,
+  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     const profileA = profiles!.find((p) => p.id === couple.user_a_id)!;
     const profileB = profiles!.find((p) => p.id === couple.user_b_id)!;
 
-    const anthropic = anthropicClient();
+    const openai = openaiClient();
 
     // 편지: 발신자 입력 → 수신자가 읽는 텍스트 (AGENT.md 스키마 주석: letter_a_to_b = A→B)
     async function refineLetter(senderInput: InputRow, senderName: string, receiverName: string) {
@@ -113,38 +113,44 @@ Deno.serve(async (req) => {
         "{input_data}",
         inputSummary(senderInput, senderName, receiverName),
       );
-      const res = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      const res = await openai.chat.completions.create({
+        model: AI_MODEL,
         max_tokens: 2048,
-        thinking: { type: "adaptive" },
-        system,
         messages: [
+          { role: "system", content: system },
           { role: "user", content: `${receiverName}에게 전달할 편지를 작성해주세요.` },
         ],
       });
-      const block = res.content.find((b) => b.type === "text");
-      if (!block || block.type !== "text") throw new Error("no letter text");
-      return block.text.trim();
+      const text = res.choices[0]?.message?.content;
+      if (!text) throw new Error("no letter text");
+      return text.trim();
     }
 
     // 분석: 양쪽 입력 → JSON 3섹션
     async function generateAnalysis() {
       const both = `## A (${profileA.display_name})\n${inputSummary(inputA, profileA.display_name, profileB.display_name)}\n\n## B (${profileB.display_name})\n${inputSummary(inputB, profileB.display_name, profileA.display_name)}`;
       const system = ANALYSIS_SYSTEM.replace("{both_inputs}", both);
-      const res = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      const res = await openai.chat.completions.create({
+        model: AI_MODEL,
         max_tokens: 4096,
-        thinking: { type: "adaptive" },
-        system,
-        messages: [{ role: "user", content: "두 사람의 갈등 구조를 분석해주세요." }],
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: "두 사람의 갈등 구조를 분석해주세요." },
+        ],
       });
-      const block = res.content.find((b) => b.type === "text");
-      if (!block || block.type !== "text") throw new Error("no analysis text");
-      return parseModelJson<{
-        timing: unknown;
-        temperature: unknown;
-        understanding: unknown;
-      }>(block.text);
+      const content = res.choices[0]?.message?.content;
+      if (!content) throw new Error("no analysis text");
+      const parsed = parseModelJson<{
+        timing?: unknown;
+        temperature?: unknown;
+        understanding?: unknown;
+      }>(content);
+      // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 섹션 누락을 명시적으로 검증
+      if (!parsed.timing || !parsed.temperature || !parsed.understanding) {
+        throw new Error(`analysis missing required section(s): ${JSON.stringify(parsed)}`);
+      }
+      return parsed as { timing: unknown; temperature: unknown; understanding: unknown };
     }
 
     // 세 호출은 서로 독립 — 병렬 실행

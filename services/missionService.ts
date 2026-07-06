@@ -1,5 +1,5 @@
 // 04단계: 미션 로직 (AGENT.md §2, §4-4)
-import { requestMission } from '@/lib/anthropic';
+import { requestMission } from '@/lib/ai';
 import type { ConflictOutputs, Couple, MissionItem } from '@/lib/types';
 
 // 두 번째 ready 직후 호출 — 서버가 멱등 처리하므로 중복 호출 안전

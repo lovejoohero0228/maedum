@@ -1,8 +1,8 @@
-// Claude API 래퍼 (AGENT.md §2)
+// AI Edge Function 래퍼 (AGENT.md §2)
 //
-// 중요: ANTHROPIC_API_KEY는 클라이언트에 절대 노출되지 않는다 (AGENT.md §10).
+// 중요: AI 제공자의 API 키는 클라이언트에 절대 노출되지 않는다 (AGENT.md §10).
 // 모든 AI 호출은 Supabase Edge Function(ai-input / ai-letters / ai-mission)을 통해
-// 서버사이드에서 처리되며, 이 파일은 그 호출 래퍼다.
+// 서버사이드에서 처리되며, 이 파일은 그 호출 래퍼다. (현재 서버는 OpenAI 사용 — CLAUDE.md 참고)
 import { supabase } from './supabase';
 import type { GuideResponse, FieldKey } from './types';
 

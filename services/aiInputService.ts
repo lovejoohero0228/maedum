@@ -1,6 +1,6 @@
 // 02단계: AI 재질문 로직 (AGENT.md §2, §4-2)
 import { supabase } from '@/lib/supabase';
-import { askInputGuide } from '@/lib/anthropic';
+import { askInputGuide } from '@/lib/ai';
 import type { ConflictInput, FieldKey, GuideResponse } from '@/lib/types';
 
 // 현재 항목의 첫 질문 요청
