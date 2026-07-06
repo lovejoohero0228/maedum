@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { letterForMe } from '@/services/aiLetterService';
 import { parseAnalysis } from '@/services/aiAnalysisService';
@@ -105,7 +105,7 @@ export default function Letter() {
       setIAmReady(true);
       if (count >= 2) goMission();
     } catch (e) {
-      Alert.alert('오류', String(e));
+      showAlert('오류', String(e));
     } finally {
       setBusy(false);
     }

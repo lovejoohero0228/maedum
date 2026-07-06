@@ -1,7 +1,6 @@
 // 회원가입 — display_name은 metadata로 전달, 트리거가 profiles 생성
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 import { colors, fonts } from '@/constants/colors';
 
 export default function Register() {
@@ -22,7 +22,7 @@ export default function Register() {
 
   const onRegister = async () => {
     if (!name.trim() || !email || password.length < 6) {
-      Alert.alert('입력 확인', '이름, 이메일, 6자 이상 비밀번호를 입력해주세요.');
+      showAlert('입력 확인', '이름, 이메일, 6자 이상 비밀번호를 입력해주세요.');
       return;
     }
     setLoading(true);
@@ -33,7 +33,7 @@ export default function Register() {
     });
     setLoading(false);
     if (error) {
-      Alert.alert('가입 실패', error.message);
+      showAlert('가입 실패', error.message);
       return;
     }
     router.replace('/(main)/pair');

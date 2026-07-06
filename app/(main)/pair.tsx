@@ -1,7 +1,6 @@
 // 커플 연결 — 초대 코드 생성 / 입력 (Phase 1)
 import { useState } from 'react';
 import {
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { acceptInviteCode, createInviteCode } from '@/services/conflictService';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 import { colors, fonts } from '@/constants/colors';
 
 export default function Pair() {
@@ -38,7 +38,7 @@ export default function Pair() {
           : msg.includes('cannot_pair_with_self')
             ? '자신의 코드는 사용할 수 없어요.'
             : msg;
-      Alert.alert('연결 실패', friendly);
+      showAlert('연결 실패', friendly);
     } finally {
       setBusy(false);
     }
@@ -51,7 +51,7 @@ export default function Pair() {
       const code = await createInviteCode(session.user.id);
       setMyCode(code);
     } catch (e) {
-      Alert.alert('오류', String(e));
+      showAlert('오류', String(e));
     } finally {
       setBusy(false);
     }

@@ -1,7 +1,6 @@
 // 로그인 (이메일)
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 import { colors, fonts } from '@/constants/colors';
 
 export default function Login() {
@@ -25,7 +25,7 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      Alert.alert('로그인 실패', error.message);
+      showAlert('로그인 실패', error.message);
       return;
     }
     router.replace('/(main)/home');

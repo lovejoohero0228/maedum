@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
+import { showAlert } from '@/lib/alert';
 import { answerField, getMyInput, startField } from '@/services/aiInputService';
 import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
@@ -108,7 +108,7 @@ export default function Input() {
         const res = await startField(conflict.id, current);
         applyResponse(res);
       } catch (e) {
-        Alert.alert('오류', String(e));
+        showAlert('오류', String(e));
       } finally {
         setWaiting(false);
       }
@@ -133,7 +133,7 @@ export default function Input() {
         applyResponse(first);
       }
     } catch (e) {
-      Alert.alert('오류', String(e));
+      showAlert('오류', String(e));
     } finally {
       setWaiting(false);
     }

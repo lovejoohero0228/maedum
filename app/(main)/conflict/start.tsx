@@ -1,11 +1,12 @@
 // 01단계: 갈등 시작 (AGENT.md §4-1)
 // "맺음 시작" → conflicts row 생성 → 상대에게 푸시 → 입력 화면으로
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { startConflict, joinConflict } from '@/services/conflictService';
 import { sendPushTo } from '@/lib/notifications';
+import { showAlert } from '@/lib/alert';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { colors, fonts } from '@/constants/colors';
 
@@ -42,7 +43,7 @@ export default function Start() {
       }
       router.replace('/(main)/conflict/input');
     } catch (e) {
-      Alert.alert('오류', String(e));
+      showAlert('오류', String(e));
     } finally {
       setBusy(false);
     }

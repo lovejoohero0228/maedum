@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
 import { MissionPaper } from '@/components/mission/MissionPaper';
@@ -69,7 +69,7 @@ export default function Mission() {
       setConflict(null);
       router.replace('/(main)/home');
     } catch (e) {
-      Alert.alert('오류', String(e));
+      showAlert('오류', String(e));
     } finally {
       setBusy(false);
     }
