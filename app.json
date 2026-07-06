@@ -41,6 +41,13 @@
           "defaultChannel": "default"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "929a9084-0631-4a7b-b5f1-cf8f96aaedb8"
+      }
+    },
+    "owner": "lovejoohero"
   }
 }
