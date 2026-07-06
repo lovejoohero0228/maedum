@@ -1,10 +1,12 @@
 // 홈 — 플로우 진입점 (AGENT.md §2)
 // 커플 없음 → pair, 진행 중 갈등 → 상태에 맞는 화면 이어가기, 없으면 "맺음 시작"
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { supabase } from '@/lib/supabase';
+import { deleteConflict } from '@/services/conflictService';
+import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
 import { colors, fonts } from '@/constants/colors';
 import type { Conflict, ConflictStatus } from '@/lib/types';
@@ -46,6 +48,7 @@ export default function Home() {
   const setConflict = useConflictStore((s) => s.setConflict);
   const loadCouple = useConflictStore((s) => s.loadCouple);
   const myColor = useConflictStore((s) => s.myColor);
+  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -77,6 +80,25 @@ export default function Home() {
   const onStart = () => router.push('/(main)/conflict/start');
   const onResume = () => {
     if (conflict) router.push(routeForStatus(conflict.status) as never);
+  };
+
+  const onDeleteConflict = async () => {
+    if (!conflict || deleting) return;
+    const ok = await showConfirm(
+      '진행 중인 맺음을 삭제할까요?',
+      '지금까지 입력한 내용이 모두 사라지고, 처음부터 다시 시작하게 돼요.',
+      '삭제',
+    );
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deleteConflict(conflict.id);
+      setConflict(null);
+    } catch (e) {
+      showAlert('삭제 실패', String(e));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const partnerStarted =
@@ -114,15 +136,22 @@ export default function Home() {
       )}
 
       {conflict && conflict.status !== 'resolved' ? (
-        <Pressable style={styles.resumeCard} onPress={onResume}>
-          <Text style={styles.resumeLabel}>
-            {partnerStarted
-              ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
-              : '진행 중인 맺음'}
-          </Text>
-          <Text style={styles.resumeStatus}>{STATUS_LABEL[conflict.status]}</Text>
-          <Text style={styles.resumeCta}>이어가기 →</Text>
-        </Pressable>
+        <View style={styles.resumeCard}>
+          <Pressable onPress={onResume}>
+            <Text style={styles.resumeLabel}>
+              {partnerStarted
+                ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
+                : '진행 중인 맺음'}
+            </Text>
+            <Text style={styles.resumeStatus}>{STATUS_LABEL[conflict.status]}</Text>
+            <Text style={styles.resumeCta}>이어가기 →</Text>
+          </Pressable>
+          <Pressable onPress={onDeleteConflict} disabled={deleting} hitSlop={8}>
+            <Text style={styles.resumeDelete}>
+              {deleting ? '삭제 중…' : '삭제하고 다시 시작'}
+            </Text>
+          </Pressable>
+        </View>
       ) : (
         <Pressable
           style={[styles.startButton, !couple && styles.startDisabled]}
@@ -197,6 +226,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.displayMedium,
   },
   resumeCta: { fontSize: 13, color: colors.purpleText, marginTop: 12, fontFamily: fonts.body },
+  resumeDelete: {
+    fontSize: 12,
+    color: colors.ink3,
+    marginTop: 14,
+    textDecorationLine: 'underline',
+    fontFamily: fonts.body,
+  },
   startButton: {
     backgroundColor: colors.bgCard,
     borderRadius: 20,

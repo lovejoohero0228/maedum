@@ -32,6 +32,11 @@ export async function acceptInviteCode(code: string): Promise<string> {
   return data as string; // couple_id
 }
 
+export async function unpairCouple(): Promise<void> {
+  const { error } = await supabase.rpc('unpair_couple');
+  if (error) throw error;
+}
+
 export async function getPartnerProfile(
   couple: Couple,
   myUserId: string,
@@ -131,6 +136,12 @@ export async function resolveConflict(conflictId: string): Promise<void> {
     .from('conflicts')
     .update({ status: 'resolved' })
     .eq('id', conflictId);
+  if (error) throw error;
+}
+
+// 진행 중이던 맺음 삭제 — 재시작하고 싶을 때 사용 (완료된 것도 삭제 가능)
+export async function deleteConflict(conflictId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_conflict', { p_conflict_id: conflictId });
   if (error) throw error;
 }
 
