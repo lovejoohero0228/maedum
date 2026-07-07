@@ -1,5 +1,5 @@
 // 커플 연결 — 초대 코드 생성 / 입력 (Phase 1)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -21,7 +21,35 @@ export default function Pair() {
   const [inputCode, setInputCode] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // 상대 코드 수락 후 홈으로. 상대(초대자)는 realtime 대신 홈 재진입 시 couple을 발견한다.
+  // 초대 코드 생성 후, 상대가 수락하면 accept_couple_invite()가 couples row를
+  // (user_a_id: 나=inviter, user_b_id: 상대)로 만든다. 예전엔 이 이벤트를 아무도
+  // 구독하지 않아 초대자는 화면에 코드만 뜬 채로 멈춰 있었다 — 홈으로 직접
+  // 돌아가야만 연결된 상태를 "발견"할 수 있었다. 여기서 실시간으로 감지해
+  // 자동으로 홈에 들어가도록 한다.
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel(`pair-couple-${session.user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'couples',
+          filter: `user_a_id=eq.${session.user.id}`,
+        },
+        async () => {
+          await loadCouple();
+          router.replace('/(main)/home');
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, loadCouple]);
+
+  // 상대 코드 수락 후 홈으로.
   const onAccept = async () => {
     if (!inputCode.trim()) return;
     setBusy(true);
@@ -50,8 +78,9 @@ export default function Pair() {
     try {
       const code = await createInviteCode(session.user.id);
       setMyCode(code);
-    } catch (e) {
-      showAlert('오류', String(e));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e);
+      showAlert('코드 생성 실패', msg);
     } finally {
       setBusy(false);
     }
