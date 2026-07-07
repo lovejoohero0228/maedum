@@ -30,6 +30,11 @@ export const INPUT_FIELDS: InputField[] = [
     goal: 'conflict_scale과 emotion_scale을 각각 1~10으로. 비유를 제시해 감을 잡게 돕는다.',
   },
   {
+    key: 'emotion_words',
+    label: '감정 세분화',
+    goal: '그 순간 느낀 감정을 구체적인 단어로. multi_select: true로 4~8개 보기를 주고 복수 선택하게 한다. 감정을 정확히 표현하는 데 서툰 사람도 고를 수 있도록 최대한 세분화된 단어를 제시.',
+  },
+  {
     key: 'request',
     label: '바라는 것',
     goal: 'request_raw(모호한 원본)에서 시작해 request_refined(구체적 상황 + 실제 멘트)까지 정제.',
@@ -38,6 +43,11 @@ export const INPUT_FIELDS: InputField[] = [
     key: 'partner_intention',
     label: '상대 의도 인식',
     goal: "상대가 일부러 그랬다고 생각하는지. '악의없음' / '모름' / '무관' 중 인식 확인.",
+  },
+  {
+    key: 'partner_perspective',
+    label: '상대방 마음 헤아리기',
+    goal: '의도 판단과는 별개로, 그 순간 상대방은 어떤 기분이었을 것 같은지 공감해보게 유도. multi_select: true로 편향되지 않은 균형 잡힌 감정 보기 4~8개를 주고 복수 선택하게 한다.',
   },
   {
     key: 'my_reflection',
@@ -61,6 +71,11 @@ export const INPUT_GUIDE_SYSTEM = `
 ## 현재 수집 대상 항목
 {current_field}
 
+## 이 커플에 대해 미리 알고 있는 것 (참고용, 절대 그대로 읽어주지 말 것)
+{relationship_context}
+위 정보와 레퍼런스 뱅크(있다면)를 활용해 이 커플에게 실제로 있을 법한 상황/감정을
+선택지에 우선 반영하라. 다만 사용자의 실제 답변이 이 정보와 다르면 항상 사용자의 답변을 따른다.
+
 ## 이전 대화 맥락
 {chat_history}
 
@@ -82,6 +97,8 @@ export const INPUT_GUIDE_SYSTEM = `
     "어떤 상황이었는지 감을 잡게 돕는 카테고리 예시"로 구성한다.
     예: trigger_moment → ["카톡/전화하다가", "약속·시간 문제로", "말투나 태도 때문에", "집안일 관련해서"]
   - choices를 null로 두는 것은 카테고리 예시조차 만들기 어려운 극히 드문 경우로 한정한다.
+- emotion_words, partner_perspective 항목은 반드시 multi_select: true로 응답하고, choices를
+  4~8개 제시해 사용자가 여러 개를 고를 수 있게 한다 (다른 항목은 multi_select를 생략하거나 false).
 
 ## 출력 형식
 JSON으로만 응답:
@@ -91,14 +108,19 @@ JSON으로만 응답:
   "flag_text": "좀 더 확인이 필요해요" | "좋아요, 이해됐어요" | "한 가지만 더" | null,
   "message": "AI 메시지 텍스트",
   "choices": ["선택지1", "선택지2"] | null,
+  "multi_select": true | false,
   "extracted_value": "이 턴에서 수집된 필드 값" | null,
   "field_complete": true | false
 }
 
 - "type": question(새 항목 첫 질문) / clarify(재질문) / confirm(수집값 확인) / next(항목 완료, 다음으로)
+- "multi_select": 사용자가 choices에서 여러 개를 고를 수 있는 항목이면 true (emotion_words,
+  partner_perspective). 그 외에는 false 또는 생략.
 - "extracted_value": field_complete가 true일 때 반드시 채운다.
   - scales 항목: "conflict:7,emotion:9" 형식
   - context 항목: JSON 문자열 '{"tags":["누적","피로"],"detail":"..."}' 형식
   - request 항목: JSON 문자열 '{"raw":"...","refined":"..."}' 형식
+  - emotion_words 항목: JSON 배열 문자열 '["서운함","답답함"]' 형식
+  - partner_perspective 항목: JSON 배열 문자열 '["미안했을 것 같다","답답했을 것 같다"]' 형식
   - 그 외: 정제된 텍스트
 `;

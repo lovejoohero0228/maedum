@@ -3,13 +3,14 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import type { Conflict, ConflictOutputs, Couple, Profile } from '@/lib/types';
+import type { Conflict, ConflictOutputs, Couple, Profile, RelationshipProfile } from '@/lib/types';
 import {
   getActiveConflict,
   getMyCouple,
   getOutputs,
   getPartnerProfile,
 } from '@/services/conflictService';
+import { getRelationshipProfile } from '@/services/relationshipProfileService';
 
 interface ConflictStore {
   // 인증
@@ -22,6 +23,10 @@ interface ConflictStore {
   couple: Couple | null;
   partner: Profile | null;
   loadCouple: () => Promise<void>;
+
+  // 관계 프로필 (본인 것만 — 파트너 비공개)
+  relationshipProfile: RelationshipProfile | null;
+  loadRelationshipProfile: () => Promise<void>;
 
   // 현재 갈등
   conflict: Conflict | null;
@@ -64,7 +69,17 @@ export const useConflictStore = create<ConflictStore>((set, get) => ({
       set({ partner });
       const conflict = await getActiveConflict(couple.id);
       set({ conflict });
+      await get().loadRelationshipProfile();
     }
+  },
+
+  relationshipProfile: null,
+  loadRelationshipProfile: async () => {
+    const { couple, session } = get();
+    const userId = session?.user.id;
+    if (!couple || !userId) return;
+    const relationshipProfile = await getRelationshipProfile(couple.id, userId);
+    set({ relationshipProfile });
   },
 
   conflict: null,
@@ -101,6 +116,7 @@ export const useConflictStore = create<ConflictStore>((set, get) => ({
       profile: null,
       couple: null,
       partner: null,
+      relationshipProfile: null,
       conflict: null,
       outputs: null,
     }),

@@ -4,8 +4,9 @@
 // 응답: INPUT_GUIDE_SYSTEM의 JSON 봉투 + { next_field, all_complete }
 //
 // 필드가 완료되면 extracted_value를 컬럼에 저장하고,
-// 7개 항목이 모두 끝나면 is_complete=TRUE. 상대도 완료면 status='ai_processing'
+// 모든 항목(INPUT_FIELDS)이 끝나면 is_complete=TRUE. 상대도 완료면 status='ai_processing'
 // 후 ai-letters를 백그라운드 호출한다.
+// 호출자의 relationship_profiles(있다면)를 조회해 개인화된 선택지 생성에 참고시킨다.
 import {
   openaiClient,
   adminClient,
@@ -23,6 +24,7 @@ interface GuideEnvelope {
   flag_text: string | null;
   message: string;
   choices: string[] | null;
+  multi_select: boolean;
   extracted_value: string | null;
   field_complete: boolean;
 }
@@ -49,6 +51,10 @@ function columnsForField(fieldKey: string, value: string): Record<string, unknow
       const parsed = JSON.parse(value) as { raw: string; refined: string };
       return { request_raw: parsed.raw, request_refined: parsed.refined };
     }
+    case "emotion_words":
+      return { emotion_words: JSON.parse(value) as string[] };
+    case "partner_perspective":
+      return { partner_perspective_words: JSON.parse(value) as string[] };
     default:
       return { [fieldKey]: value };
   }
@@ -90,12 +96,43 @@ Deno.serve(async (req) => {
 
     const chatLog: ChatEntry[] = (input.chat_log as ChatEntry[]) ?? [];
 
+    // 관계 프로필 + AI 생성 레퍼런스 뱅크 조회 (없으면 빈 컨텍스트로 폴백)
+    const { data: conflict } = await admin
+      .from("conflicts")
+      .select("couple_id")
+      .eq("id", conflict_id)
+      .single();
+    const { data: relationshipProfile } = conflict
+      ? await admin
+          .from("relationship_profiles")
+          .select("*")
+          .eq("couple_id", conflict.couple_id)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : { data: null };
+
+    const relationshipContext = relationshipProfile
+      ? JSON.stringify(
+          {
+            관계유형: relationshipProfile.relationship_type,
+            사귄기간_개월: relationshipProfile.relationship_duration_months,
+            내_성격: relationshipProfile.my_personality_tags,
+            내가_보는_상대_성격: relationshipProfile.partner_personality_tags,
+            자주_부딪히는_주제: relationshipProfile.frequent_conflict_topics,
+            레퍼런스_뱅크: relationshipProfile.reference_bank,
+          },
+          null,
+          2,
+        )
+      : "(관계 프로필 없음)";
+
     // 시스템 프롬프트 조립
     const history = chatLog
       .map((e) => `[${e.field}] ${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
       .join("\n");
     const system = INPUT_GUIDE_SYSTEM
       .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
+      .replace("{relationship_context}", relationshipContext)
       .replace("{chat_history}", history || "(아직 없음)");
 
     const userMessage = user_text
@@ -126,6 +163,7 @@ Deno.serve(async (req) => {
       flag_text: raw.flag_text ?? null,
       message: raw.message ?? "",
       choices: raw.choices ?? null,
+      multi_select: raw.multi_select ?? false,
       extracted_value: raw.extracted_value ?? null,
       field_complete: raw.field_complete ?? false,
     };

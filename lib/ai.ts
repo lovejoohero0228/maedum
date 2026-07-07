@@ -4,7 +4,7 @@
 // 모든 AI 호출은 Supabase Edge Function(ai-input / ai-letters / ai-mission)을 통해
 // 서버사이드에서 처리되며, 이 파일은 그 호출 래퍼다. (현재 서버는 OpenAI 사용 — CLAUDE.md 참고)
 import { supabase } from './supabase';
-import type { GuideResponse, FieldKey } from './types';
+import type { GuideResponse, FieldKey, ReferenceBank } from './types';
 
 // 02단계: AI 재질문 한 턴. user_text가 null이면 해당 항목 첫 질문.
 export async function askInputGuide(
@@ -27,4 +27,14 @@ export async function requestMission(conflictId: string): Promise<void> {
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
+}
+
+// 관계 프로필 설정/수정 완료 시 개인화 레퍼런스 뱅크 생성 요청
+export async function requestReferenceBank(profileId: string): Promise<ReferenceBank> {
+  const { data, error } = await supabase.functions.invoke('ai-reference-bank', {
+    body: { profile_id: profileId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.reference_bank as ReferenceBank;
 }

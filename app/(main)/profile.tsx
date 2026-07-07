@@ -62,6 +62,11 @@ export default function Profile() {
         ) : null}
       </View>
 
+      <Pressable style={styles.card} onPress={() => router.push('/(main)/relationship-profile')}>
+        <Text style={styles.cardLabel}>관계 정보</Text>
+        <Text style={styles.pairLink}>관계 정보 수정 →</Text>
+      </Pressable>
+
       <View style={styles.card}>
         <Text style={styles.cardLabel}>연결된 상대</Text>
         {partner ? (

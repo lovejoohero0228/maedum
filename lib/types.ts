@@ -46,13 +46,41 @@ export interface ConflictInput {
   context_detail: string | null;
   conflict_scale: number | null;
   emotion_scale: number | null;
+  emotion_words: string[] | null;
   request_raw: string | null;
   request_refined: string | null;
   partner_intention: string | null;
+  partner_perspective_words: string[] | null;
   my_reflection: string | null;
   chat_log: ChatEntry[];
   is_complete: boolean;
   completed_at: string | null;
+}
+
+// 관계 프로필 (supabase/migrations/004_relationship_profile.sql)
+export type RelationshipType = '연인' | '부부' | '썸' | '친구' | '자매' | '형제' | '기타';
+
+export interface ReferenceBank {
+  trigger_categories: string[];
+  context_tags: string[];
+  emotion_words: Record<string, string[]>;
+  partner_perspective_words: string[];
+}
+
+export interface RelationshipProfile {
+  id: string;
+  couple_id: string;
+  user_id: string;
+  relationship_type: RelationshipType;
+  relationship_duration_months: number | null;
+  my_personality_tags: string[];
+  partner_personality_tags: string[];
+  frequent_conflict_topics: string[];
+  reference_bank: ReferenceBank | null;
+  reference_bank_generated_at: string | null;
+  is_complete: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export type MissionType = 'habit' | 'acknowledge' | 'action';
@@ -108,6 +136,7 @@ export interface GuideResponse {
   flag_text: string | null;
   message: string;
   choices: string[] | null;
+  multi_select?: boolean;
   extracted_value: string | null;
   field_complete: boolean;
   next_field: string | null;
@@ -120,8 +149,10 @@ export const FIELD_ORDER = [
   'first_hurt_moment',
   'context',
   'scales',
+  'emotion_words',
   'request',
   'partner_intention',
+  'partner_perspective',
   'my_reflection',
 ] as const;
 

@@ -1,5 +1,6 @@
 // 선택지 버튼 그룹 (AGENT.md §7-1)
-// 선택지는 2~4개, allowDirectInput이면 마지막에 "직접 입력할게요 →" 추가.
+// 단일 선택(기본): 선택지는 2~4개, allowDirectInput이면 마지막에 "직접 입력할게요 →" 추가, 탭 즉시 onSelect fire.
+// 복수 선택(multiple=true): 체크박스처럼 토글만 하고, "선택 완료" 버튼을 눌러야 onSubmit이 fire된다.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -11,6 +12,10 @@ interface ChoiceSelectorProps {
   onSelect: (value: string) => void;
   allowDirectInput?: boolean;
   color: UserColor;
+  multiple?: boolean;
+  selectedValues?: string[];
+  onToggle?: (value: string) => void;
+  onSubmit?: () => void;
 }
 
 export function ChoiceSelector({
@@ -19,16 +24,20 @@ export function ChoiceSelector({
   onSelect,
   allowDirectInput = true,
   color,
+  multiple = false,
+  selectedValues = [],
+  onToggle,
+  onSubmit,
 }: ChoiceSelectorProps) {
   const theme = userTheme(color);
   return (
     <View style={styles.wrap}>
       {choices.map((choice) => {
-        const isSelected = selected === choice;
+        const isSelected = multiple ? selectedValues.includes(choice) : selected === choice;
         return (
           <Pressable
             key={choice}
-            onPress={() => onSelect(choice)}
+            onPress={() => (multiple ? onToggle?.(choice) : onSelect(choice))}
             style={[
               styles.choice,
               { borderColor: isSelected ? theme.mid : colors.line },
@@ -36,12 +45,31 @@ export function ChoiceSelector({
             ]}
           >
             <Text style={[styles.choiceText, isSelected && { color: theme.text }]}>
-              {choice}
+              {multiple ? `${isSelected ? '☑' : '☐'} ${choice}` : choice}
             </Text>
           </Pressable>
         );
       })}
-      {allowDirectInput ? (
+      {multiple ? (
+        <Pressable
+          onPress={onSubmit}
+          disabled={selectedValues.length === 0}
+          style={[
+            styles.choice,
+            styles.submit,
+            { backgroundColor: selectedValues.length === 0 ? colors.line2 : theme.mid },
+          ]}
+        >
+          <Text
+            style={[
+              styles.submitText,
+              { color: selectedValues.length === 0 ? colors.ink3 : '#fff' },
+            ]}
+          >
+            선택 완료
+          </Text>
+        </Pressable>
+      ) : allowDirectInput ? (
         <Pressable
           onPress={() => onSelect(DIRECT_INPUT)}
           style={[styles.choice, styles.direct]}
@@ -73,5 +101,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink3,
     fontFamily: fonts.body,
+  },
+  submit: { borderWidth: 0, alignItems: 'center' },
+  submitText: {
+    fontSize: 14,
+    fontFamily: fonts.bodyMedium,
   },
 });

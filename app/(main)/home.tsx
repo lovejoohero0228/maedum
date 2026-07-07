@@ -45,6 +45,7 @@ export default function Home() {
   const couple = useConflictStore((s) => s.couple);
   const partner = useConflictStore((s) => s.partner);
   const conflict = useConflictStore((s) => s.conflict);
+  const relationshipProfile = useConflictStore((s) => s.relationshipProfile);
   const setConflict = useConflictStore((s) => s.setConflict);
   const loadCouple = useConflictStore((s) => s.loadCouple);
   const myColor = useConflictStore((s) => s.myColor);
@@ -77,7 +78,10 @@ export default function Home() {
     };
   }, [couple, setConflict]);
 
+  const needsRelationshipSetup = !!couple && (!relationshipProfile || !relationshipProfile.is_complete);
+
   const onStart = () => router.push('/(main)/conflict/start');
+  const onSetupRelationship = () => router.push('/(main)/relationship-profile');
   const onResume = () => {
     if (conflict) router.push(routeForStatus(conflict.status) as never);
   };
@@ -135,6 +139,14 @@ export default function Home() {
         </Pressable>
       )}
 
+      {needsRelationshipSetup ? (
+        <Pressable style={styles.setupCard} onPress={onSetupRelationship}>
+          <Text style={styles.setupText}>
+            관계 정보를 입력하면 더 정확한 질문을 받을 수 있어요 → 입력하기
+          </Text>
+        </Pressable>
+      ) : null}
+
       {conflict && conflict.status !== 'resolved' ? (
         <View style={styles.resumeCard}>
           <Pressable onPress={onResume}>
@@ -154,9 +166,9 @@ export default function Home() {
         </View>
       ) : (
         <Pressable
-          style={[styles.startButton, !couple && styles.startDisabled]}
+          style={[styles.startButton, (!couple || needsRelationshipSetup) && styles.startDisabled]}
           onPress={onStart}
-          disabled={!couple}
+          disabled={!couple || needsRelationshipSetup}
         >
           <Text style={styles.startIcon}>🕊</Text>
           <Text style={styles.startText}>맺음 시작</Text>
@@ -212,6 +224,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pairText: { color: colors.amberText, fontSize: 13, fontFamily: fonts.body },
+  setupCard: {
+    backgroundColor: colors.purpleTint,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  setupText: { color: colors.purpleText, fontSize: 13, fontFamily: fonts.body },
   resumeCard: {
     backgroundColor: colors.purpleTint,
     borderRadius: 20,

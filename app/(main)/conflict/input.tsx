@@ -44,8 +44,10 @@ function nextFieldFrom(input: Awaited<ReturnType<typeof getMyInput>>): FieldKey 
     first_hurt_moment: !!input.first_hurt_moment,
     context: !!input.context_detail,
     scales: input.conflict_scale != null,
+    emotion_words: !!input.emotion_words?.length,
     request: !!input.request_refined,
     partner_intention: !!input.partner_intention,
+    partner_perspective: !!input.partner_perspective_words?.length,
     my_reflection: !!input.my_reflection,
   };
   return FIELD_ORDER.find((f) => !done[f]) ?? FIELD_ORDER[FIELD_ORDER.length - 1];
@@ -59,6 +61,8 @@ export default function Input() {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [field, setField] = useState<FieldKey>(FIELD_ORDER[0]);
   const [choices, setChoices] = useState<string[] | null>(null);
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [text, setText] = useState('');
   const [showTextInput, setShowTextInput] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -74,11 +78,13 @@ export default function Input() {
       { role: 'assistant', content: res.message, flag: res.flag, flagText: res.flag_text },
     ]);
     setChoices(res.choices);
+    setMultiSelect(!!res.multi_select);
+    setSelectedValues([]);
     setShowTextInput(!res.choices || res.choices.length === 0);
     scrollToEnd();
 
     if (res.all_complete) {
-      // 7개 항목 완료 → 상대 대기 화면
+      // 모든 항목 완료 → 상대 대기 화면
       setTimeout(() => router.replace('/(main)/conflict/waiting'), 1200);
       return null;
     }
@@ -119,6 +125,8 @@ export default function Input() {
     if (!conflict || waiting) return;
     setBubbles((prev) => [...prev, { role: 'user', content: answer }]);
     setChoices(null);
+    setMultiSelect(false);
+    setSelectedValues([]);
     setShowTextInput(false);
     setText('');
     setWaiting(true);
@@ -145,6 +153,16 @@ export default function Input() {
       return;
     }
     send(value);
+  };
+
+  const onToggleChoice = (value: string) =>
+    setSelectedValues((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+
+  const onSubmitMultiChoice = () => {
+    if (selectedValues.length === 0) return;
+    send(selectedValues.join(', '));
   };
 
   const fieldIndex = FIELD_ORDER.indexOf(field) + 1;
@@ -185,6 +203,10 @@ export default function Input() {
             selected={null}
             onSelect={onChoice}
             color={myColor()}
+            multiple={multiSelect}
+            selectedValues={selectedValues}
+            onToggle={onToggleChoice}
+            onSubmit={onSubmitMultiChoice}
           />
         ) : null}
       </ScrollView>
