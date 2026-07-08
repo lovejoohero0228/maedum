@@ -35,6 +35,30 @@ interface ChatEntry {
   content: string;
 }
 
+// 레퍼런스 뱅크 중 현재 필드와 직접 대응되는 후보만 뽑아 프롬프트에 명시적으로 박아준다.
+// (relationship_context 전체를 통째로 주는 것만으로는 모델이 현재 필드와 무관한 정보에 묻혀
+//  범용 예시 문구를 그대로 재사용하는 경향이 있었음 — 필드별 후보를 별도 섹션으로 분리)
+function fieldChoiceBank(fieldKey: string, bank: Record<string, unknown> | null): string {
+  if (!bank) return "(레퍼런스 뱅크 없음 — 아래 선택지 설계 원칙의 예시를 참고해 새로 만들 것)";
+  switch (fieldKey) {
+    case "trigger_moment":
+      return Array.isArray(bank.trigger_categories) ? bank.trigger_categories.join(", ") : "(없음)";
+    case "context":
+      return Array.isArray(bank.context_tags) ? bank.context_tags.join(", ") : "(없음)";
+    case "emotion_words": {
+      const words = bank.emotion_words;
+      if (!words || typeof words !== "object") return "(없음)";
+      return Object.values(words as Record<string, string[]>).flat().join(", ");
+    }
+    case "partner_perspective":
+      return Array.isArray(bank.partner_perspective_words)
+        ? bank.partner_perspective_words.join(", ")
+        : "(없음)";
+    default:
+      return "(이 항목은 레퍼런스 뱅크 대상이 아님 — 대화 맥락에서 자유롭게 구성)";
+  }
+}
+
 // extracted_value → conflict_inputs 컬럼 매핑
 function columnsForField(fieldKey: string, value: string): Record<string, unknown> {
   switch (fieldKey) {
@@ -133,6 +157,10 @@ Deno.serve(async (req) => {
     const system = INPUT_GUIDE_SYSTEM
       .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
       .replace("{relationship_context}", relationshipContext)
+      .replace(
+        "{field_choice_bank}",
+        fieldChoiceBank(field_key, relationshipProfile?.reference_bank ?? null),
+      )
       .replace("{chat_history}", history || "(아직 없음)");
 
     const userMessage = user_text
