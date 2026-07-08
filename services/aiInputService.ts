@@ -13,8 +13,9 @@ export function answerField(
   conflictId: string,
   fieldKey: FieldKey,
   text: string,
+  selections?: string[][] | null,
 ): Promise<GuideResponse> {
-  return askInputGuide(conflictId, fieldKey, text);
+  return askInputGuide(conflictId, fieldKey, text, selections);
 }
 
 export async function getMyInput(

@@ -18,6 +18,11 @@ interface ChoiceSelectorProps {
   onSubmit?: () => void;
   // false면 이미 답변이 끝난 과거 턴 — 강조 표시만 유지하고 탭/직접입력/선택완료는 숨긴다.
   interactive?: boolean;
+  // true면 여러 선택지 그룹을 한 화면에 모아 쓰는 모드 — single-select 그룹이라도 탭 즉시
+  // 제출하지 않고 onToggle로 이 그룹 안에서만 선택 상태를 바꾼다. 제출은 상위에서 별도로 처리.
+  groupMode?: boolean;
+  // 여러 그룹을 모아 쓸 때 자체 제출/직접입력 행을 숨기고 싶으면 false (상위가 공용으로 하나만 그림)
+  showFooter?: boolean;
 }
 
 export function ChoiceSelector({
@@ -31,6 +36,8 @@ export function ChoiceSelector({
   onToggle,
   onSubmit,
   interactive = true,
+  groupMode = false,
+  showFooter = true,
 }: ChoiceSelectorProps) {
   const theme = userTheme(color);
   return (
@@ -40,7 +47,9 @@ export function ChoiceSelector({
         return (
           <Pressable
             key={choice}
-            onPress={() => interactive && (multiple ? onToggle?.(choice) : onSelect(choice))}
+            onPress={() =>
+              interactive && (multiple || groupMode ? onToggle?.(choice) : onSelect(choice))
+            }
             disabled={!interactive}
             style={[
               styles.choice,
@@ -55,7 +64,7 @@ export function ChoiceSelector({
           </Pressable>
         );
       })}
-      {!interactive
+      {!interactive || !showFooter
         ? null
         : multiple ? (
         <Pressable

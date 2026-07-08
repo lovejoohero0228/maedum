@@ -30,13 +30,22 @@ export interface Conflict {
   updated_at: string;
 }
 
+// 한 턴에 여러 주제(시점/장소/구체적 말 등)를 동시에 물을 때, 주제별로 묶인 선택지 세트
+export interface ChoiceGroup {
+  label: string;
+  choices: string[];
+  multi_select: boolean;
+}
+
 export interface ChatEntry {
   role: 'user' | 'assistant';
   field: string;
   content: string;
-  // assistant 엔트리에만 채워짐 — 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터
-  choices?: string[] | null;
-  multi_select?: boolean;
+  // assistant 엔트리: 이 턴에서 제시한 선택지 그룹들 (없으면 자유서술형 질문)
+  choice_groups?: ChoiceGroup[] | null;
+  // user 엔트리: 선택지에서 답한 경우, choice_groups와 같은 순서로 각 그룹에서 고른 값들
+  // (직접 입력한 자유서술 답변이면 null)
+  selections?: string[][] | null;
 }
 
 export interface ConflictInput {
@@ -138,8 +147,7 @@ export interface GuideResponse {
   flag: FlagType | null;
   flag_text: string | null;
   message: string;
-  choices: string[] | null;
-  multi_select?: boolean;
+  choice_groups: ChoiceGroup[] | null;
   extracted_value: string | null;
   field_complete: boolean;
   next_field: string | null;

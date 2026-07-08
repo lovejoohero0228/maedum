@@ -7,13 +7,15 @@ import { supabase } from './supabase';
 import type { GuideResponse, FieldKey, ReferenceBank } from './types';
 
 // 02단계: AI 재질문 한 턴. user_text가 null이면 해당 항목 첫 질문.
+// selections: choice_groups에서 실제로 고른 값들(그룹 순서와 동일한 배열의 배열) — 직접 입력이면 생략.
 export async function askInputGuide(
   conflictId: string,
   fieldKey: FieldKey,
   userText: string | null,
+  selections?: string[][] | null,
 ): Promise<GuideResponse> {
   const { data, error } = await supabase.functions.invoke('ai-input', {
-    body: { conflict_id: conflictId, field_key: fieldKey, user_text: userText },
+    body: { conflict_id: conflictId, field_key: fieldKey, user_text: userText, selections: selections ?? null },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);

@@ -1,6 +1,8 @@
 // 02단계: AI 재질문 입력 (AGENT.md §4-2, §5-1)
-// 요청: { conflict_id, field_key, user_text | null }
+// 요청: { conflict_id, field_key, user_text | null, selections? }
 //   - user_text가 null이면 해당 항목의 첫 질문을 생성
+//   - selections: 클라이언트가 choice_groups에서 실제로 고른 값들 (그룹 순서와 동일한 배열의 배열).
+//     자유 입력 답변이면 undefined/null — user_text는 그 경우에도 항상 사람이 읽을 합쳐진 텍스트다.
 // 응답: INPUT_GUIDE_SYSTEM의 JSON 봉투 + { next_field, all_complete }
 //
 // 필드가 완료되면 extracted_value를 컬럼에 저장하고,
@@ -18,13 +20,18 @@ import {
 } from "../_shared/utils.ts";
 import { INPUT_GUIDE_SYSTEM, INPUT_FIELDS } from "../../../prompts/input_guide.ts";
 
+interface ChoiceGroup {
+  label: string;
+  choices: string[];
+  multi_select: boolean;
+}
+
 interface GuideEnvelope {
   type: "question" | "clarify" | "confirm" | "next";
   flag: "warn" | "ok" | "purple" | null;
   flag_text: string | null;
   message: string;
-  choices: string[] | null;
-  multi_select: boolean;
+  choice_groups: ChoiceGroup[] | null;
   extracted_value: string | null;
   field_complete: boolean;
 }
@@ -33,8 +40,8 @@ interface ChatEntry {
   role: "user" | "assistant";
   field: string;
   content: string;
-  choices?: string[] | null;
-  multi_select?: boolean;
+  choice_groups?: ChoiceGroup[] | null;
+  selections?: string[][] | null;
 }
 
 // 레퍼런스 뱅크 중 현재 필드와 직접 대응되는 후보만 뽑아 프롬프트에 명시적으로 박아준다.
@@ -90,7 +97,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { conflict_id, field_key, user_text } = await req.json();
+    const { conflict_id, field_key, user_text, selections } = await req.json();
 
     const supaUser = userClient(req);
     const { data: auth } = await supaUser.auth.getUser();
@@ -187,26 +194,40 @@ Deno.serve(async (req) => {
     // (OpenAI가 종종 extracted_value/field_complete 같은 키를 통째로 생략함).
     // 누락된 키는 "아직 완료 안 됨" 쪽으로 안전하게 기본값 처리한다.
     const raw = parseModelJson<Partial<GuideEnvelope>>(content);
+    const rawGroups = Array.isArray(raw.choice_groups) ? raw.choice_groups : null;
     const envelope: GuideEnvelope = {
       type: raw.type ?? "clarify",
       flag: raw.flag ?? null,
       flag_text: raw.flag_text ?? null,
       message: raw.message ?? "",
-      choices: raw.choices ?? null,
-      multi_select: raw.multi_select ?? false,
+      choice_groups: rawGroups
+        ? rawGroups
+            .map((g) => ({
+              label: g?.label ?? "",
+              choices: Array.isArray(g?.choices) ? g.choices : [],
+              multi_select: g?.multi_select ?? false,
+            }))
+            .filter((g) => g.choices.length > 0)
+        : null,
       extracted_value: raw.extracted_value ?? null,
       field_complete: raw.field_complete ?? false,
     };
 
     // 대화 로그 누적
-    // choices/multi_select는 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터
-    if (user_text) chatLog.push({ role: "user", field: field_key, content: user_text });
+    // choice_groups/selections는 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터
+    if (user_text) {
+      chatLog.push({
+        role: "user",
+        field: field_key,
+        content: user_text,
+        selections: Array.isArray(selections) ? selections : null,
+      });
+    }
     chatLog.push({
       role: "assistant",
       field: field_key,
       content: envelope.message,
-      choices: envelope.choices,
-      multi_select: envelope.multi_select,
+      choice_groups: envelope.choice_groups,
     });
 
     const patch: Record<string, unknown> = { chat_log: chatLog };
