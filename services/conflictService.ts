@@ -4,14 +4,14 @@ import type { Conflict, ConflictOutputs, Couple, Profile } from '@/lib/types';
 
 // ── 커플 연결 (초대 코드 방식, Phase 1) ─────────────────────
 
-export async function getMyCouple(userId: string): Promise<Couple | null> {
+export async function getMyCouples(userId: string): Promise<Couple[]> {
   const { data, error } = await supabase
     .from('couples')
     .select('*')
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
 export async function createInviteCode(userId: string): Promise<string> {
@@ -32,8 +32,8 @@ export async function acceptInviteCode(code: string): Promise<string> {
   return data as string; // couple_id
 }
 
-export async function unpairCouple(): Promise<void> {
-  const { error } = await supabase.rpc('unpair_couple');
+export async function unpairCouple(coupleId: string): Promise<void> {
+  const { error } = await supabase.rpc('unpair_couple', { p_couple_id: coupleId });
   if (error) throw error;
 }
 

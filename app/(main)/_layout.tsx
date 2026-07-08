@@ -8,14 +8,14 @@ import { colors } from '@/constants/colors';
 export default function MainLayout() {
   const session = useConflictStore((s) => s.session);
   const loadProfile = useConflictStore((s) => s.loadProfile);
-  const loadCouple = useConflictStore((s) => s.loadCouple);
+  const loadCouples = useConflictStore((s) => s.loadCouples);
 
   useEffect(() => {
     if (!session) return;
     loadProfile();
-    loadCouple();
+    loadCouples();
     registerPushToken(session.user.id).catch(() => {});
-  }, [session, loadProfile, loadCouple]);
+  }, [session, loadProfile, loadCouples]);
 
   if (!session) return <Redirect href="/(auth)/login" />;
 

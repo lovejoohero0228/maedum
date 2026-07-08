@@ -16,7 +16,8 @@ import { colors, fonts } from '@/constants/colors';
 
 export default function Pair() {
   const session = useConflictStore((s) => s.session);
-  const loadCouple = useConflictStore((s) => s.loadCouple);
+  const loadCouples = useConflictStore((s) => s.loadCouples);
+  const selectCouple = useConflictStore((s) => s.selectCouple);
   const [myCode, setMyCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -39,7 +40,7 @@ export default function Pair() {
           filter: `user_a_id=eq.${session.user.id}`,
         },
         async () => {
-          await loadCouple();
+          await loadCouples();
           router.replace('/(main)/home');
         },
       )
@@ -47,22 +48,23 @@ export default function Pair() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, loadCouple]);
+  }, [session, loadCouples]);
 
-  // 상대 코드 수락 후 홈으로.
+  // 상대 코드 수락 후 홈으로 — 방금 연결된 커플을 활성 커플로 선택한다.
   const onAccept = async () => {
     if (!inputCode.trim()) return;
     setBusy(true);
     try {
-      await acceptInviteCode(inputCode);
-      await loadCouple();
+      const coupleId = await acceptInviteCode(inputCode);
+      await loadCouples();
+      await selectCouple(coupleId);
       router.replace('/(main)/home');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       const friendly = msg.includes('invalid_or_expired')
         ? '코드가 올바르지 않거나 만료됐어요.'
-        : msg.includes('already_paired')
-          ? '이미 연결된 커플이 있어요.'
+        : msg.includes('already_paired_with_this_person')
+          ? '이미 그 사람과는 연결되어 있어요.'
           : msg.includes('cannot_pair_with_self')
             ? '자신의 코드는 사용할 수 없어요.'
             : msg;

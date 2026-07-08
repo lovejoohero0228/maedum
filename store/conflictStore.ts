@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Conflict, ConflictOutputs, Couple, Profile, RelationshipProfile } from '@/lib/types';
 import {
   getActiveConflict,
-  getMyCouple,
+  getMyCouples,
   getOutputs,
   getPartnerProfile,
 } from '@/services/conflictService';
@@ -19,10 +19,15 @@ interface ConflictStore {
   setSession: (session: Session | null) => void;
   loadProfile: () => Promise<void>;
 
-  // 커플
+  // 커플 (한 사람이 여러 명과 동시에 연결될 수 있음 — couples가 전체 목록,
+  // couple/partner는 그중 현재 화면에서 선택된 "활성" 커플)
+  couples: Couple[];
+  partners: Record<string, Profile>;
+  activeCoupleId: string | null;
   couple: Couple | null;
   partner: Profile | null;
-  loadCouple: () => Promise<void>;
+  loadCouples: () => Promise<void>;
+  selectCouple: (coupleId: string) => Promise<void>;
 
   // 관계 프로필 (본인 것만 — 파트너 비공개)
   relationshipProfile: RelationshipProfile | null;
@@ -57,20 +62,43 @@ export const useConflictStore = create<ConflictStore>((set, get) => ({
     set({ profile: data ?? null });
   },
 
+  couples: [],
+  partners: {},
+  activeCoupleId: null,
   couple: null,
   partner: null,
-  loadCouple: async () => {
+  loadCouples: async () => {
     const userId = get().session?.user.id;
     if (!userId) return;
-    const couple = await getMyCouple(userId);
-    set({ couple });
-    if (couple) {
-      const partner = await getPartnerProfile(couple, userId);
-      set({ partner });
-      const conflict = await getActiveConflict(couple.id);
-      set({ conflict });
-      await get().loadRelationshipProfile();
+    const couples = await getMyCouples(userId);
+    const partnerEntries = await Promise.all(
+      couples.map(async (c) => [c.id, await getPartnerProfile(c, userId)] as const),
+    );
+    const partners: Record<string, Profile> = {};
+    for (const [coupleId, partner] of partnerEntries) {
+      if (partner) partners[coupleId] = partner;
     }
+    set({ couples, partners });
+
+    if (couples.length === 0) {
+      set({ activeCoupleId: null, couple: null, partner: null, conflict: null, outputs: null });
+      return;
+    }
+
+    // 이전에 선택했던 커플이 여전히 유효하면 유지, 아니면 첫 번째 커플로
+    const prevActiveId = get().activeCoupleId;
+    const stillValid = couples.some((c) => c.id === prevActiveId);
+    await get().selectCouple(stillValid ? (prevActiveId as string) : couples[0].id);
+  },
+
+  selectCouple: async (coupleId: string) => {
+    const couple = get().couples.find((c) => c.id === coupleId) ?? null;
+    const partner = couple ? (get().partners[coupleId] ?? null) : null;
+    set({ activeCoupleId: coupleId, couple, partner, conflict: null, outputs: null });
+    if (!couple) return;
+    const conflict = await getActiveConflict(couple.id);
+    set({ conflict });
+    await get().loadRelationshipProfile();
   },
 
   relationshipProfile: null,
@@ -114,6 +142,9 @@ export const useConflictStore = create<ConflictStore>((set, get) => ({
     set({
       session: null,
       profile: null,
+      couples: [],
+      partners: {},
+      activeCoupleId: null,
       couple: null,
       partner: null,
       relationshipProfile: null,

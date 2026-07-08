@@ -12,10 +12,12 @@ import { colors, fonts } from '@/constants/colors';
 export default function Profile() {
   const session = useConflictStore((s) => s.session);
   const profile = useConflictStore((s) => s.profile);
-  const partner = useConflictStore((s) => s.partner);
+  const couples = useConflictStore((s) => s.couples);
+  const partners = useConflictStore((s) => s.partners);
   const myColor = useConflictStore((s) => s.myColor);
   const reset = useConflictStore((s) => s.reset);
-  const [unpairing, setUnpairing] = useState(false);
+  const loadCouples = useConflictStore((s) => s.loadCouples);
+  const [unpairingId, setUnpairingId] = useState<string | null>(null);
 
   const onLogout = async () => {
     await supabase.auth.signOut();
@@ -23,22 +25,22 @@ export default function Profile() {
     router.replace('/(auth)/login');
   };
 
-  const onUnpair = async () => {
-    if (unpairing) return;
+  const onUnpair = async (coupleId: string, partnerName: string) => {
+    if (unpairingId) return;
     const ok = await showConfirm(
-      '파트너 연결을 해제할까요?',
+      `${partnerName}님과의 연결을 해제할까요?`,
       '지금까지 함께 나눈 맺음 기록이 모두 삭제되고, 되돌릴 수 없어요.',
       '연결 해제',
     );
     if (!ok) return;
-    setUnpairing(true);
+    setUnpairingId(coupleId);
     try {
-      await unpairCouple();
-      useConflictStore.setState({ couple: null, partner: null, conflict: null, outputs: null });
+      await unpairCouple(coupleId);
+      await loadCouples();
     } catch (e) {
       showAlert('연결 해제 실패', String(e));
     } finally {
-      setUnpairing(false);
+      setUnpairingId(null);
     }
   };
 
@@ -69,27 +71,41 @@ export default function Profile() {
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>연결된 상대</Text>
-        {partner ? (
-          <>
-            <View style={styles.partnerRow}>
-              <Avatar
-                name={partner.display_name}
-                color={myColor() === 'blue' ? 'coral' : 'blue'}
-                size={36}
-              />
-              <Text style={styles.partnerName}>{partner.display_name}</Text>
-            </View>
-            <Pressable onPress={onUnpair} disabled={unpairing} hitSlop={8}>
-              <Text style={styles.unpairLink}>
-                {unpairing ? '해제 중…' : '연결 해제'}
-              </Text>
-            </Pressable>
-          </>
+        {couples.length > 0 ? (
+          couples.map((c, i) => {
+            const p = partners[c.id];
+            return (
+              <View
+                key={c.id}
+                style={[styles.partnerRow, i > 0 && styles.partnerRowDivider]}
+              >
+                <Avatar
+                  name={p?.display_name ?? '?'}
+                  color={myColor() === 'blue' ? 'coral' : 'blue'}
+                  size={36}
+                />
+                <Text style={styles.partnerName}>{p?.display_name ?? '상대'}</Text>
+                <Pressable
+                  onPress={() => onUnpair(c.id, p?.display_name ?? '상대')}
+                  disabled={!!unpairingId}
+                  hitSlop={8}
+                  style={styles.unpairButton}
+                >
+                  <Text style={styles.unpairLink}>
+                    {unpairingId === c.id ? '해제 중…' : '연결 해제'}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })
         ) : (
           <Pressable onPress={() => router.push('/(main)/pair')}>
             <Text style={styles.pairLink}>아직 연결 안 됨 → 연결하기</Text>
           </Pressable>
         )}
+        <Pressable onPress={() => router.push('/(main)/pair')} style={styles.addPartnerButton}>
+          <Text style={styles.addPartnerButtonText}>＋ 새로운 상대 연결하기</Text>
+        </Pressable>
       </View>
 
       <Pressable style={styles.logout} onPress={onLogout}>
@@ -131,13 +147,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontFamily: fonts.body,
   },
-  partnerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  partnerName: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
+  partnerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  partnerRowDivider: { borderTopWidth: 1, borderTopColor: colors.line2 },
+  partnerName: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium, flex: 1 },
   pairLink: { fontSize: 14, color: colors.purpleText, fontFamily: fonts.body },
+  addPartnerButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.purpleMid,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  addPartnerButtonText: { fontSize: 13, color: colors.purpleText, fontFamily: fonts.bodyMedium },
+  unpairButton: { marginLeft: 'auto' },
   unpairLink: {
     fontSize: 12,
     color: colors.coralText,
-    marginTop: 12,
     textDecorationLine: 'underline',
     fontFamily: fonts.body,
   },

@@ -1,7 +1,7 @@
 // 홈 — 플로우 진입점 (AGENT.md §2)
 // 커플 없음 → pair, 진행 중 갈등 → 상태에 맞는 화면 이어가기, 없으면 "맺음 시작"
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { supabase } from '@/lib/supabase';
@@ -42,41 +42,53 @@ const STATUS_LABEL: Record<ConflictStatus, string> = {
 export default function Home() {
   const session = useConflictStore((s) => s.session);
   const profile = useConflictStore((s) => s.profile);
+  const couples = useConflictStore((s) => s.couples);
+  const partners = useConflictStore((s) => s.partners);
+  const activeCoupleId = useConflictStore((s) => s.activeCoupleId);
   const couple = useConflictStore((s) => s.couple);
   const partner = useConflictStore((s) => s.partner);
   const conflict = useConflictStore((s) => s.conflict);
   const relationshipProfile = useConflictStore((s) => s.relationshipProfile);
   const setConflict = useConflictStore((s) => s.setConflict);
-  const loadCouple = useConflictStore((s) => s.loadCouple);
+  const loadCouples = useConflictStore((s) => s.loadCouples);
+  const selectCouple = useConflictStore((s) => s.selectCouple);
   const myColor = useConflictStore((s) => s.myColor);
   const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      loadCouple();
-    }, [loadCouple]),
+      loadCouples();
+    }, [loadCouples]),
   );
 
-  // 상대가 갈등을 시작하면 실시간으로 감지 (01단계: B의 진입 경로)
+  // 연결된 모든 상대에 대해, 그중 누구든 갈등을 시작하면 실시간으로 감지
+  // (01단계: B의 진입 경로) — 현재 활성 커플의 것이면 바로 반영,
+  // 다른 커플의 것이면 목록을 새로고침해 배지/상태가 갱신되게 한다.
   useEffect(() => {
-    if (!couple) return;
-    const channel = supabase
-      .channel(`home-conflicts-${couple.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'conflicts',
-          filter: `couple_id=eq.${couple.id}`,
-        },
-        (payload) => setConflict(payload.new as Conflict),
-      )
-      .subscribe();
+    if (couples.length === 0) return;
+    const channels = couples.map((c) =>
+      supabase
+        .channel(`home-conflicts-${c.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'conflicts',
+            filter: `couple_id=eq.${c.id}`,
+          },
+          (payload) => {
+            const newConflict = payload.new as Conflict;
+            if (c.id === activeCoupleId) setConflict(newConflict);
+            else loadCouples();
+          },
+        )
+        .subscribe(),
+    );
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [couple, setConflict]);
+  }, [couples, activeCoupleId, setConflict, loadCouples]);
 
   const needsRelationshipSetup = !!couple && (!relationshipProfile || !relationshipProfile.is_complete);
 
@@ -113,10 +125,47 @@ export default function Home() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>맺음</Text>
-        <Pressable onPress={() => router.push('/(main)/profile')}>
-          {profile ? <Avatar name={profile.display_name} color={myColor()} size={34} /> : null}
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable style={styles.addPartnerButton} onPress={() => router.push('/(main)/pair')}>
+            <Text style={styles.addPartnerButtonText}>＋ 상대 추가</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/(main)/profile')}>
+            {profile ? <Avatar name={profile.display_name} color={myColor()} size={34} /> : null}
+          </Pressable>
+        </View>
       </View>
+
+      {couples.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.partnerScroll}
+          contentContainerStyle={styles.partnerScrollContent}
+        >
+          {couples.map((c) => {
+            const p = partners[c.id];
+            const isActive = c.id === activeCoupleId;
+            return (
+              <Pressable
+                key={c.id}
+                style={[styles.partnerChip, isActive && styles.partnerChipActive]}
+                onPress={() => selectCouple(c.id)}
+              >
+                <Avatar name={p?.display_name ?? '?'} color="coral" size={32} />
+                <Text
+                  style={[styles.partnerChipName, isActive && styles.partnerChipNameActive]}
+                  numberOfLines={1}
+                >
+                  {p?.display_name ?? '상대'}
+                </Text>
+              </Pressable>
+            );
+          })}
+          <Pressable style={styles.addPartnerChip} onPress={() => router.push('/(main)/pair')}>
+            <Text style={styles.addPartnerIcon}>+</Text>
+          </Pressable>
+        </ScrollView>
+      ) : null}
 
       {couple && partner ? (
         <View style={styles.coupleCard}>
@@ -200,6 +249,44 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logo: { fontSize: 24, color: colors.ink, fontFamily: fonts.displayMedium },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  addPartnerButton: {
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.purpleMid,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  addPartnerButtonText: { fontSize: 12, color: colors.purpleText, fontFamily: fonts.bodyMedium },
+  partnerScroll: { marginBottom: 12 },
+  partnerScrollContent: { gap: 10, paddingRight: 4 },
+  partnerChip: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    gap: 4,
+    width: 68,
+  },
+  partnerChipActive: {
+    borderColor: colors.purpleMid,
+    backgroundColor: colors.purpleTint,
+  },
+  partnerChipName: { fontSize: 11, color: colors.ink3, fontFamily: fonts.body },
+  partnerChipNameActive: { color: colors.purpleText, fontFamily: fonts.bodyMedium },
+  addPartnerChip: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderStyle: 'dashed',
+  },
+  addPartnerIcon: { fontSize: 22, color: colors.ink3 },
   coupleCard: {
     backgroundColor: colors.bgCard,
     borderRadius: 20,
