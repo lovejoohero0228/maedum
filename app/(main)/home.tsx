@@ -188,14 +188,6 @@ export default function Home() {
         </Pressable>
       )}
 
-      {needsRelationshipSetup ? (
-        <Pressable style={styles.setupCard} onPress={onSetupRelationship}>
-          <Text style={styles.setupText}>
-            관계 정보를 입력하면 더 정확한 질문을 받을 수 있어요 → 입력하기
-          </Text>
-        </Pressable>
-      ) : null}
-
       {conflict && conflict.status !== 'resolved' ? (
         <View style={styles.resumeCard}>
           <Pressable onPress={onResume}>
@@ -213,11 +205,19 @@ export default function Home() {
             </Text>
           </Pressable>
         </View>
+      ) : needsRelationshipSetup ? (
+        <Pressable style={styles.startButton} onPress={onSetupRelationship}>
+          <Text style={styles.startIcon}>📝</Text>
+          <Text style={styles.startText}>관계 정보 입력하기</Text>
+          <Text style={styles.startHint}>
+            두 사람 이야기를 먼저 알려주면 더 정확한 질문을 받을 수 있어요
+          </Text>
+        </Pressable>
       ) : (
         <Pressable
-          style={[styles.startButton, (!couple || needsRelationshipSetup) && styles.startDisabled]}
+          style={[styles.startButton, !couple && styles.startDisabled]}
           onPress={onStart}
-          disabled={!couple || needsRelationshipSetup}
+          disabled={!couple}
         >
           <Text style={styles.startIcon}>🕊</Text>
           <Text style={styles.startText}>맺음 시작</Text>
@@ -311,13 +311,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pairText: { color: colors.amberText, fontSize: 13, fontFamily: fonts.body },
-  setupCard: {
-    backgroundColor: colors.purpleTint,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  setupText: { color: colors.purpleText, fontSize: 13, fontFamily: fonts.body },
   resumeCard: {
     backgroundColor: colors.purpleTint,
     borderRadius: 20,

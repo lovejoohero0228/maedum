@@ -68,22 +68,26 @@ export default function RelationshipProfileScreen() {
   const onFinish = async () => {
     if (!couple || !session || saving) return;
     setSaving(true);
+    const basePayload = {
+      couple_id: couple.id,
+      user_id: session.user.id,
+      relationship_type: relationshipType!,
+      relationship_duration_months: needsDuration ? durationMonths : null,
+      my_personality_tags: myTags,
+      partner_personality_tags: partnerTags,
+      frequent_conflict_topics: topics,
+    };
     try {
-      const profile = await upsertRelationshipProfile({
-        couple_id: couple.id,
-        user_id: session.user.id,
-        relationship_type: relationshipType!,
-        relationship_duration_months: needsDuration ? durationMonths : null,
-        my_personality_tags: myTags,
-        partner_personality_tags: partnerTags,
-        frequent_conflict_topics: topics,
-        is_complete: true,
-      });
+      // is_complete는 레퍼런스 뱅크 생성까지 성공해야 true로 커밋한다.
+      // 여기서 실패하면 입력값은 저장된 채(is_complete: false) 남아 재시도할 수 있다.
+      const profile = await upsertRelationshipProfile({ ...basePayload, is_complete: false });
       await requestReferenceBank(profile.id);
+      await upsertRelationshipProfile({ ...basePayload, is_complete: true });
       await loadRelationshipProfile();
       router.replace('/(main)/home');
     } catch (e) {
-      showAlert('저장 실패', String(e));
+      await loadRelationshipProfile().catch(() => {});
+      showAlert('저장 실패', '레퍼런스 준비 중 문제가 생겼어요. 입력한 내용은 저장되어 있으니 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
