@@ -17,6 +17,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useConflictStore } from '@/store/conflictStore';
 import { colors } from '@/constants/colors';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -47,7 +48,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -55,6 +56,6 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       />
-    </>
+    </ErrorBoundary>
   );
 }

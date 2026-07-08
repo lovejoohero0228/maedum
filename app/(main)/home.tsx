@@ -57,7 +57,7 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      loadCouples();
+      loadCouples().catch((e) => console.error('loadCouples failed', e));
     }, [loadCouples]),
   );
 

@@ -40,8 +40,12 @@ export default function Pair() {
           filter: `user_a_id=eq.${session.user.id}`,
         },
         async () => {
-          await loadCouples();
-          router.replace('/(main)/home');
+          try {
+            await loadCouples();
+            router.replace('/(main)/home');
+          } catch (e) {
+            console.error('loadCouples after pairing failed', e);
+          }
         },
       )
       .subscribe();

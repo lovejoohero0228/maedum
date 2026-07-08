@@ -12,8 +12,8 @@ export default function MainLayout() {
 
   useEffect(() => {
     if (!session) return;
-    loadProfile();
-    loadCouples();
+    loadProfile().catch((e) => console.error('loadProfile failed', e));
+    loadCouples().catch((e) => console.error('loadCouples failed', e));
     registerPushToken(session.user.id).catch(() => {});
   }, [session, loadProfile, loadCouples]);
 
