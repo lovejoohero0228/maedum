@@ -103,13 +103,23 @@ export default function Input() {
           router.replace('/(main)/conflict/waiting');
           return;
         }
-        if (saved?.chat_log?.length) {
-          setBubbles(
-            saved.chat_log.map((e: ChatEntry) => ({ role: e.role, content: e.content })),
-          );
+        const chatLog = saved?.chat_log ?? [];
+        if (chatLog.length) {
+          setBubbles(chatLog.map((e: ChatEntry) => ({ role: e.role, content: e.content })));
         }
         const current = nextFieldFrom(saved);
         setField(current);
+
+        // 이미 이 항목에 대한 대화가 시작된 상태라면(새로고침 등으로 재진입) —
+        // startField를 다시 호출하면 AI가 "첫 질문"부터 새로 던져서 진행이 리셋된 것처럼 보인다.
+        // 마지막 로그가 이미 AI의 질문(답변 대기 중)이면 그대로 두고 사용자 입력만 받는다.
+        const hasFieldHistory = chatLog.some((e: ChatEntry) => e.field === current);
+        const lastEntry = chatLog[chatLog.length - 1];
+        if (hasFieldHistory && lastEntry?.role === 'assistant') {
+          setShowTextInput(true);
+          return;
+        }
+
         setWaiting(true);
         const res = await startField(conflict.id, current);
         applyResponse(res);
