@@ -34,6 +34,9 @@ export interface ChatEntry {
   role: 'user' | 'assistant';
   field: string;
   content: string;
+  // assistant 엔트리에만 채워짐 — 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터
+  choices?: string[] | null;
+  multi_select?: boolean;
 }
 
 export interface ConflictInput {

@@ -33,6 +33,8 @@ interface ChatEntry {
   role: "user" | "assistant";
   field: string;
   content: string;
+  choices?: string[] | null;
+  multi_select?: boolean;
 }
 
 // 레퍼런스 뱅크 중 현재 필드와 직접 대응되는 후보만 뽑아 프롬프트에 명시적으로 박아준다.
@@ -197,8 +199,15 @@ Deno.serve(async (req) => {
     };
 
     // 대화 로그 누적
+    // choices/multi_select는 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터
     if (user_text) chatLog.push({ role: "user", field: field_key, content: user_text });
-    chatLog.push({ role: "assistant", field: field_key, content: envelope.message });
+    chatLog.push({
+      role: "assistant",
+      field: field_key,
+      content: envelope.message,
+      choices: envelope.choices,
+      multi_select: envelope.multi_select,
+    });
 
     const patch: Record<string, unknown> = { chat_log: chatLog };
 

@@ -34,6 +34,19 @@ interface Bubble {
   content: string;
   flag?: FlagType | null;
   flagText?: string | null;
+  choices?: string[] | null;
+  multiSelect?: boolean;
+}
+
+// assistant 턴이 선택지 기반이었고, 바로 다음 user 턴의 답변이 그 선택지에서 고른 것인지 추론한다.
+// (직접 입력한 자유서술 답변은 선택지와 매칭되지 않으므로 자연스럽게 null — 평범한 말풍선으로 표시됨)
+function inferSelection(assistant: Bubble, user: Bubble): string[] | null {
+  if (!assistant.choices?.length) return null;
+  if (assistant.multiSelect) {
+    const parts = user.content.split(', ').map((s) => s.trim());
+    return parts.length > 0 && parts.every((p) => assistant.choices!.includes(p)) ? parts : null;
+  }
+  return assistant.choices.includes(user.content) ? [user.content] : null;
 }
 
 // 저장된 입력에서 다음 수집 항목 계산
@@ -75,7 +88,14 @@ export default function Input() {
   const applyResponse = useCallback((res: GuideResponse) => {
     setBubbles((prev) => [
       ...prev,
-      { role: 'assistant', content: res.message, flag: res.flag, flagText: res.flag_text },
+      {
+        role: 'assistant',
+        content: res.message,
+        flag: res.flag,
+        flagText: res.flag_text,
+        choices: res.choices,
+        multiSelect: !!res.multi_select,
+      },
     ]);
     setChoices(res.choices);
     setMultiSelect(!!res.multi_select);
@@ -105,18 +125,33 @@ export default function Input() {
         }
         const chatLog = saved?.chat_log ?? [];
         if (chatLog.length) {
-          setBubbles(chatLog.map((e: ChatEntry) => ({ role: e.role, content: e.content })));
+          setBubbles(
+            chatLog.map((e: ChatEntry) => ({
+              role: e.role,
+              content: e.content,
+              choices: e.choices ?? null,
+              multiSelect: !!e.multi_select,
+            })),
+          );
         }
         const current = nextFieldFrom(saved);
         setField(current);
 
         // 이미 이 항목에 대한 대화가 시작된 상태라면(새로고침 등으로 재진입) —
         // startField를 다시 호출하면 AI가 "첫 질문"부터 새로 던져서 진행이 리셋된 것처럼 보인다.
-        // 마지막 로그가 이미 AI의 질문(답변 대기 중)이면 그대로 두고 사용자 입력만 받는다.
+        // 마지막 로그가 이미 AI의 질문(답변 대기 중)이면 그대로 두고 사용자 입력만 받는다 —
+        // 선택지가 있던 질문이면 선택지도 함께 복원한다.
         const hasFieldHistory = chatLog.some((e: ChatEntry) => e.field === current);
         const lastEntry = chatLog[chatLog.length - 1];
         if (hasFieldHistory && lastEntry?.role === 'assistant') {
-          setShowTextInput(true);
+          if (lastEntry.choices?.length) {
+            setChoices(lastEntry.choices);
+            setMultiSelect(!!lastEntry.multi_select);
+            setSelectedValues([]);
+            setShowTextInput(false);
+          } else {
+            setShowTextInput(true);
+          }
           return;
         }
 
@@ -192,13 +227,32 @@ export default function Input() {
         style={styles.chat}
         contentContainerStyle={styles.chatContent}
       >
-        {bubbles.map((b, i) =>
-          b.role === 'assistant' ? (
-            <AIChatBubble key={i} message={b.content} flag={b.flag} flagText={b.flagText} />
-          ) : (
-            <UserChatBubble key={i} message={b.content} color={myColor()} />
-          ),
-        )}
+        {bubbles.map((b, i) => {
+          if (b.role === 'assistant') {
+            const isPending = i === bubbles.length - 1;
+            const answer = !isPending ? inferSelection(b, bubbles[i + 1]) : null;
+            return (
+              <View key={i}>
+                <AIChatBubble message={b.content} flag={b.flag} flagText={b.flagText} />
+                {b.choices?.length && !isPending ? (
+                  <ChoiceSelector
+                    choices={b.choices}
+                    selected={b.multiSelect ? null : (answer?.[0] ?? null)}
+                    selectedValues={answer ?? []}
+                    multiple={!!b.multiSelect}
+                    interactive={false}
+                    onSelect={() => {}}
+                    color={myColor()}
+                  />
+                ) : null}
+              </View>
+            );
+          }
+          // 직전 assistant 턴의 선택지에서 고른 답변이면, 이미 강조된 칩으로 표시되므로 중복 생략
+          const prev = bubbles[i - 1];
+          if (prev?.role === 'assistant' && inferSelection(prev, b)) return null;
+          return <UserChatBubble key={i} message={b.content} color={myColor()} />;
+        })}
 
         {waiting ? (
           <View style={styles.typing}>

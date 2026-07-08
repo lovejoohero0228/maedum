@@ -16,6 +16,8 @@ interface ChoiceSelectorProps {
   selectedValues?: string[];
   onToggle?: (value: string) => void;
   onSubmit?: () => void;
+  // false면 이미 답변이 끝난 과거 턴 — 강조 표시만 유지하고 탭/직접입력/선택완료는 숨긴다.
+  interactive?: boolean;
 }
 
 export function ChoiceSelector({
@@ -28,6 +30,7 @@ export function ChoiceSelector({
   selectedValues = [],
   onToggle,
   onSubmit,
+  interactive = true,
 }: ChoiceSelectorProps) {
   const theme = userTheme(color);
   return (
@@ -37,11 +40,13 @@ export function ChoiceSelector({
         return (
           <Pressable
             key={choice}
-            onPress={() => (multiple ? onToggle?.(choice) : onSelect(choice))}
+            onPress={() => interactive && (multiple ? onToggle?.(choice) : onSelect(choice))}
+            disabled={!interactive}
             style={[
               styles.choice,
               { borderColor: isSelected ? theme.mid : colors.line },
               isSelected && { backgroundColor: theme.tint },
+              !interactive && !isSelected && styles.choiceMuted,
             ]}
           >
             <Text style={[styles.choiceText, isSelected && { color: theme.text }]}>
@@ -50,7 +55,9 @@ export function ChoiceSelector({
           </Pressable>
         );
       })}
-      {multiple ? (
+      {!interactive
+        ? null
+        : multiple ? (
         <Pressable
           onPress={onSubmit}
           disabled={selectedValues.length === 0}
@@ -96,6 +103,7 @@ const styles = StyleSheet.create({
     color: colors.ink2,
     fontFamily: fonts.body,
   },
+  choiceMuted: { opacity: 0.5 },
   direct: { borderStyle: 'dashed' },
   directText: {
     fontSize: 14,
