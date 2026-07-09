@@ -55,8 +55,8 @@ const FIELD_ORDER = [
   'trigger_moment',
   'hurt_context',
   'feelings',
-  'request',
   'partner_mind',
+  'request',
   'my_reflection',
 ];
 

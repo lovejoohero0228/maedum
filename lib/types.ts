@@ -177,8 +177,8 @@ export const FIELD_ORDER = [
   'trigger_moment', // → trigger_moment
   'hurt_context', // → first_hurt_moment + context_tags + context_detail
   'feelings', // → conflict_scale + emotion_scale + emotion_words
-  'request', // → request_raw + request_need + request_refined
   'partner_mind', // → partner_intention + partner_perspective_words
+  'request', // → request_raw + request_need + request_refined
   'my_reflection', // → my_reflection
 ] as const;
 
@@ -187,7 +187,7 @@ export type FieldKey = (typeof FIELD_ORDER)[number];
 // 항목 네비게이터/재시작 UI용 짧은 라벨 (prompts/input_guide.ts의 label과 동일 의미)
 export const FIELD_LABELS: Record<FieldKey, string> = {
   trigger_moment: '상황',
-  hurt_context: '상한 순간·맥락',
+  hurt_context: '갈등 발생 순간',
   feelings: '내 마음',
   request: '바라는 것',
   partner_mind: '상대 마음',
