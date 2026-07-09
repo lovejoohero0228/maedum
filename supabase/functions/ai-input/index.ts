@@ -43,6 +43,59 @@ interface ChatEntry {
   selections?: string[][] | null;
 }
 
+// json_object 응답을 GuideEnvelope로 정규화 (누락 키는 "아직 완료 안 됨" 쪽으로 기본값)
+function normalizeEnvelope(content: string): GuideEnvelope {
+  const raw = parseModelJson<Partial<GuideEnvelope>>(content);
+  const rawGroups = Array.isArray(raw.choice_groups) ? raw.choice_groups : null;
+  return {
+    type: raw.type ?? "clarify",
+    flag: raw.flag ?? null,
+    flag_text: raw.flag_text ?? null,
+    message: raw.message ?? "",
+    choice_groups: rawGroups
+      ? rawGroups
+          .map((g) => ({
+            label: g?.label ?? "",
+            choices: Array.isArray(g?.choices) ? g.choices : [],
+          }))
+          .filter((g) => g.choices.length > 0)
+      : null,
+    extracted_value: raw.extracted_value ?? null,
+    field_complete: raw.field_complete ?? false,
+  };
+}
+
+// 선택지 없는 자유서술 질문이 허용되는 필드 (input_guide의 두 예외가 모두 여기 속함)
+const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "first_hurt_moment"]);
+
+// 보기 생성 여부를 프롬프트에게만 맡기지 않는 룰 기반 검증.
+// 위반 사유 문자열을 반환하면 AI를 재호출한다 (null이면 통과).
+// - field_complete 턴: extracted_value가 반드시 있어야 한다 (없으면 클라이언트가
+//   저장 안 된 채 다음 항목으로 넘어가는 유령 진행이 생긴다).
+// - 질문 턴: choice_groups가 반드시 있어야 한다. 자유서술 턴은 trigger_moment/
+//   first_hurt_moment에서만, 그 필드에서 이미 선택지 질문이 오간 뒤에, 필드당 한 번만.
+function envelopeViolation(
+  envelope: GuideEnvelope,
+  fieldKey: string,
+  chatLog: ChatEntry[],
+): string | null {
+  if (envelope.field_complete) {
+    return envelope.extracted_value ? null : "field_complete인데 extracted_value가 비어 있음";
+  }
+  if (envelope.choice_groups?.length) return null;
+  if (!FREE_TEXT_EXEMPT_FIELDS.has(fieldKey)) {
+    return "질문 턴에 choice_groups가 없음 (이 필드는 자유서술 예외 대상이 아님)";
+  }
+  const fieldTurns = chatLog.filter((e) => e.field === fieldKey && e.role === "assistant");
+  if (fieldTurns.length === 0) {
+    return "필드의 첫 질문은 반드시 choice_groups를 포함해야 함";
+  }
+  if (fieldTurns.some((e) => !e.choice_groups || e.choice_groups.length === 0)) {
+    return "선택지 없는 자유서술 턴은 필드당 한 번만 허용됨";
+  }
+  return null;
+}
+
 // 레퍼런스 뱅크 중 현재 필드와 직접 대응되는 후보만 뽑아 프롬프트에 명시적으로 박아준다.
 // (relationship_context 전체를 통째로 주는 것만으로는 모델이 현재 필드와 무관한 정보에 묻혀
 //  범용 예시 문구를 그대로 재사용하는 경향이 있었음 — 필드별 후보를 별도 섹션으로 분리)
@@ -239,41 +292,57 @@ Deno.serve(async (req) => {
       ? user_text
       : `(항목 시작) "${field.label}" 항목의 첫 질문을 해주세요.`;
 
-    // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화
+    // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화.
+    // json_object 모드는 유효한 JSON만 보장할 뿐 스키마/규칙 준수는 보장하지 않으므로,
+    // 룰 기반 검증(envelopeViolation)에 걸리면 위반 사유를 붙여 재생성을 요구한다.
     const openai = openaiClient();
-    const response = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMessage },
-      ],
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) throw new Error("no content in response");
-    // json_object 모드는 유효한 JSON만 보장할 뿐 스키마 준수는 보장하지 않는다
-    // (OpenAI가 종종 extracted_value/field_complete 같은 키를 통째로 생략함).
-    // 누락된 키는 "아직 완료 안 됨" 쪽으로 안전하게 기본값 처리한다.
-    const raw = parseModelJson<Partial<GuideEnvelope>>(content);
-    const rawGroups = Array.isArray(raw.choice_groups) ? raw.choice_groups : null;
-    const envelope: GuideEnvelope = {
-      type: raw.type ?? "clarify",
-      flag: raw.flag ?? null,
-      flag_text: raw.flag_text ?? null,
-      message: raw.message ?? "",
-      choice_groups: rawGroups
-        ? rawGroups
-            .map((g) => ({
-              label: g?.label ?? "",
-              choices: Array.isArray(g?.choices) ? g.choices : [],
-            }))
-            .filter((g) => g.choices.length > 0)
-        : null,
-      extracted_value: raw.extracted_value ?? null,
-      field_complete: raw.field_complete ?? false,
-    };
+    const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      { role: "system", content: system },
+      { role: "user", content: userMessage },
+    ];
+    const MAX_GUIDE_ATTEMPTS = 3;
+    let envelope!: GuideEnvelope;
+    let lastContent = "";
+    let lastViolation: string | null = null;
+    for (let attempt = 0; attempt < MAX_GUIDE_ATTEMPTS; attempt++) {
+      const messages =
+        attempt === 0
+          ? baseMessages
+          : [
+              ...baseMessages,
+              { role: "assistant" as const, content: lastContent },
+              {
+                role: "user" as const,
+                content:
+                  `(자동 검증 실패 — 방금 응답은 규칙 위반: ${lastViolation}) ` +
+                  "같은 취지의 message와 질문은 유지하되, 규칙을 지킨 완전한 JSON으로 다시 응답하세요. " +
+                  "field_complete가 false인 질문 턴에는 반드시 choice_groups(주제별 1~4개 그룹, " +
+                  "각 그룹에 이 상황에 맞는 구체적 선택지 문장들)를 포함해야 하고, " +
+                  "field_complete가 true라면 extracted_value를 반드시 채워야 합니다.",
+              },
+            ];
+      const response = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_tokens: 1024,
+        response_format: { type: "json_object" },
+        messages,
+      });
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("no content in response");
+      lastContent = content;
+      envelope = normalizeEnvelope(content);
+      lastViolation = envelopeViolation(envelope, field_key, chatLog);
+      if (!lastViolation) break;
+      console.warn(
+        `guide envelope invalid (attempt ${attempt + 1}/${MAX_GUIDE_ATTEMPTS}, field ${field_key}): ${lastViolation}`,
+      );
+    }
+    // 재시도까지 전부 실패한 경우의 안전판:
+    // - 값 없는 field_complete는 저장 없이 다음 항목으로 넘어가는 유령 진행을 만들므로 강제로 되돌린다.
+    // - choice_groups 없는 질문은 클라이언트가 자유입력 폴백을 띄우므로 그대로 내보낸다 (500보다 낫다).
+    if (envelope.field_complete && !envelope.extracted_value) {
+      envelope.field_complete = false;
+    }
 
     // 대화 로그 누적
     // choice_groups/selections는 새로고침 후 선택지+강조 상태를 복원하기 위한 메타데이터

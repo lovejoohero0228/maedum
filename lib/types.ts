@@ -175,7 +175,7 @@ export type FieldKey = (typeof FIELD_ORDER)[number];
 // 항목 네비게이터/재시작 UI용 짧은 라벨 (prompts/input_guide.ts의 label과 동일 의미)
 export const FIELD_LABELS: Record<FieldKey, string> = {
   trigger_moment: '발화 시점',
-  first_hurt_moment: '상한 순간',
+  first_hurt_moment: '기분 상한 순간',
   context: '맥락',
   scales: '크기',
   emotion_words: '감정',
