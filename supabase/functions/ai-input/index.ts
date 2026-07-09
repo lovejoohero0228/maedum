@@ -23,7 +23,6 @@ import { INPUT_GUIDE_SYSTEM, INPUT_FIELDS } from "../../../prompts/input_guide.t
 interface ChoiceGroup {
   label: string;
   choices: string[];
-  multi_select: boolean;
 }
 
 interface GuideEnvelope {
@@ -205,7 +204,6 @@ Deno.serve(async (req) => {
             .map((g) => ({
               label: g?.label ?? "",
               choices: Array.isArray(g?.choices) ? g.choices : [],
-              multi_select: g?.multi_select ?? false,
             }))
             .filter((g) => g.choices.length > 0)
         : null,

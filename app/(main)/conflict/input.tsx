@@ -30,6 +30,8 @@ import {
   type GuideResponse,
 } from '@/lib/types';
 
+const NONE_OF_ABOVE = '해당 없음';
+
 interface Bubble {
   role: 'user' | 'assistant';
   content: string;
@@ -66,8 +68,12 @@ export default function Input() {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [field, setField] = useState<FieldKey>(FIELD_ORDER[0]);
   const [groups, setGroups] = useState<ChoiceGroup[] | null>(null);
-  // groupSelections[i]는 groups[i]에서 고른 값들 — 그룹마다 1개 이상 골라야 제출 가능
+  // groupSelections[i]는 groups[i]에서 고른 값들(직접 입력한 값 포함) — 그룹마다 1개 이상 골라야 제출 가능
   const [groupSelections, setGroupSelections] = useState<string[][]>([]);
+  // customChoices[i]는 groups[i]에서 사용자가 직접 입력해 추가한 값들 (칩으로 함께 표시하기 위해 보관)
+  const [customChoices, setCustomChoices] = useState<string[][]>([]);
+  const [directInputOpen, setDirectInputOpen] = useState<Record<number, boolean>>({});
+  const [directInputText, setDirectInputText] = useState<Record<number, string>>({});
   const [text, setText] = useState('');
   const [showTextInput, setShowTextInput] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -90,6 +96,9 @@ export default function Input() {
     ]);
     setGroups(res.choice_groups);
     setGroupSelections((res.choice_groups ?? []).map(() => []));
+    setCustomChoices((res.choice_groups ?? []).map(() => []));
+    setDirectInputOpen({});
+    setDirectInputText({});
     setShowTextInput(!res.choice_groups || res.choice_groups.length === 0);
     scrollToEnd();
 
@@ -137,6 +146,7 @@ export default function Input() {
           if (lastEntry.choice_groups?.length) {
             setGroups(lastEntry.choice_groups);
             setGroupSelections(lastEntry.choice_groups.map(() => []));
+            setCustomChoices(lastEntry.choice_groups.map(() => []));
             setShowTextInput(false);
           } else {
             setShowTextInput(true);
@@ -160,6 +170,9 @@ export default function Input() {
     setBubbles((prev) => [...prev, { role: 'user', content: answer, selections }]);
     setGroups(null);
     setGroupSelections([]);
+    setCustomChoices([]);
+    setDirectInputOpen({});
+    setDirectInputText({});
     setShowTextInput(false);
     setText('');
     setWaiting(true);
@@ -180,22 +193,42 @@ export default function Input() {
     }
   };
 
-  // groupIndex번째 그룹에서 value를 토글 — multi_select면 여러 개, 아니면 하나만(라디오처럼) 유지
+  // groupIndex번째 그룹에서 value를 토글 — 그룹마다 항상 복수 선택 가능.
+  // "해당 없음"은 그 그룹의 다른 선택과 배타적으로 동작한다.
   const onToggleGroupChoice = (groupIndex: number, value: string) => {
-    const group = groups?.[groupIndex];
-    if (!group) return;
     setGroupSelections((prev) => {
       const next = prev.map((arr) => arr.slice());
       const current = next[groupIndex] ?? [];
-      next[groupIndex] = group.multi_select
-        ? current.includes(value)
-          ? current.filter((v) => v !== value)
-          : [...current, value]
-        : current.includes(value)
-          ? []
-          : [value];
+      if (value === NONE_OF_ABOVE) {
+        next[groupIndex] = current.includes(NONE_OF_ABOVE) ? [] : [NONE_OF_ABOVE];
+      } else {
+        const withoutNone = current.filter((v) => v !== NONE_OF_ABOVE);
+        next[groupIndex] = withoutNone.includes(value)
+          ? withoutNone.filter((v) => v !== value)
+          : [...withoutNone, value];
+      }
       return next;
     });
+  };
+
+  // groupIndex번째 그룹에 직접 입력한 값을 칩으로 추가하고 곧바로 선택 상태로 만든다.
+  const addCustomChoice = (groupIndex: number) => {
+    const value = (directInputText[groupIndex] ?? '').trim();
+    if (!value) return;
+    setCustomChoices((prev) => {
+      const next = prev.map((arr) => arr.slice());
+      if (!next[groupIndex]) next[groupIndex] = [];
+      if (!next[groupIndex].includes(value)) next[groupIndex] = [...next[groupIndex], value];
+      return next;
+    });
+    setGroupSelections((prev) => {
+      const next = prev.map((arr) => arr.slice());
+      const withoutNone = (next[groupIndex] ?? []).filter((v) => v !== NONE_OF_ABOVE);
+      next[groupIndex] = withoutNone.includes(value) ? withoutNone : [...withoutNone, value];
+      return next;
+    });
+    setDirectInputText((prev) => ({ ...prev, [groupIndex]: '' }));
+    setDirectInputOpen((prev) => ({ ...prev, [groupIndex]: false }));
   };
 
   const canSubmitGroups =
@@ -232,21 +265,28 @@ export default function Input() {
               <View key={i}>
                 <AIChatBubble message={b.content} flag={b.flag} flagText={b.flagText} />
                 {b.choiceGroups?.length && !isPending
-                  ? b.choiceGroups.map((g, gi) => (
-                      <View key={gi}>
-                        <Text style={styles.groupLabel}>{g.label}</Text>
-                        <ChoiceSelector
-                          choices={g.choices}
-                          selected={g.multi_select ? null : (answeredBy?.selections?.[gi]?.[0] ?? null)}
-                          selectedValues={answeredBy?.selections?.[gi] ?? []}
-                          multiple={g.multi_select}
-                          interactive={false}
-                          showFooter={false}
-                          onSelect={() => {}}
-                          color={myColor()}
-                        />
-                      </View>
-                    ))
+                  ? b.choiceGroups.map((g, gi) => {
+                      const picked = answeredBy?.selections?.[gi] ?? [];
+                      // 직접 입력했던 값도 칩으로 보이도록, 원래 choices에 없던 선택값을 덧붙인다.
+                      const extra = picked.filter(
+                        (v) => v !== NONE_OF_ABOVE && !g.choices.includes(v),
+                      );
+                      return (
+                        <View key={gi}>
+                          <Text style={styles.groupLabel}>{g.label}</Text>
+                          <ChoiceSelector
+                            choices={[...g.choices, ...extra, NONE_OF_ABOVE]}
+                            selected={null}
+                            selectedValues={picked}
+                            multiple
+                            interactive={false}
+                            showFooter={false}
+                            onSelect={() => {}}
+                            color={myColor()}
+                          />
+                        </View>
+                      );
+                    })
                   : null}
               </View>
             );
@@ -269,16 +309,39 @@ export default function Input() {
               <View key={gi}>
                 <Text style={styles.groupLabel}>{g.label}</Text>
                 <ChoiceSelector
-                  choices={g.choices}
-                  selected={g.multi_select ? null : (groupSelections[gi]?.[0] ?? null)}
+                  choices={[...g.choices, ...(customChoices[gi] ?? []), NONE_OF_ABOVE]}
+                  selected={null}
                   selectedValues={groupSelections[gi] ?? []}
-                  multiple={g.multi_select}
+                  multiple
                   groupMode
                   showFooter={false}
                   onSelect={() => {}}
                   onToggle={(v) => onToggleGroupChoice(gi, v)}
                   color={myColor()}
                 />
+                {directInputOpen[gi] ? (
+                  <View style={styles.groupDirectInputRow}>
+                    <TextInput
+                      style={styles.groupDirectInput}
+                      placeholder="직접 입력…"
+                      placeholderTextColor={colors.ink3}
+                      value={directInputText[gi] ?? ''}
+                      onChangeText={(t) => setDirectInputText((prev) => ({ ...prev, [gi]: t }))}
+                      onSubmitEditing={() => addCustomChoice(gi)}
+                    />
+                    <Pressable onPress={() => addCustomChoice(gi)} style={styles.groupDirectAdd}>
+                      <Text style={styles.groupDirectAddText}>추가</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => setDirectInputOpen((prev) => ({ ...prev, [gi]: true }))}
+                    style={styles.groupDirectToggle}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.groupDirectToggleText}>+ 직접 입력</Text>
+                  </Pressable>
+                )}
               </View>
             ))}
             <View style={styles.groupFooter}>
@@ -295,9 +358,6 @@ export default function Input() {
                 >
                   선택 완료
                 </Text>
-              </Pressable>
-              <Pressable onPress={() => setShowTextInput(true)} hitSlop={8}>
-                <Text style={styles.groupDirectText}>이 중에 없어요, 직접 입력할게요 →</Text>
               </Pressable>
             </View>
           </>
@@ -365,12 +425,38 @@ const styles = StyleSheet.create({
   groupSubmitDisabled: { backgroundColor: colors.line2 },
   groupSubmitText: { color: '#fff', fontSize: 14, fontFamily: fonts.bodyMedium },
   groupSubmitTextDisabled: { color: colors.ink3 },
-  groupDirectText: {
-    fontSize: 13,
+  groupDirectToggle: { paddingLeft: 36, marginTop: 6 },
+  groupDirectToggleText: {
+    fontSize: 12,
     color: colors.ink3,
     fontFamily: fonts.body,
     textDecorationLine: 'underline',
   },
+  groupDirectInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 36,
+    marginTop: 6,
+  },
+  groupDirectInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.ink,
+    fontFamily: fonts.body,
+  },
+  groupDirectAdd: {
+    backgroundColor: colors.purpleMid,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  groupDirectAddText: { color: '#fff', fontSize: 12, fontFamily: fonts.bodyMedium },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

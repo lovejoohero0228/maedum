@@ -30,11 +30,11 @@ export interface Conflict {
   updated_at: string;
 }
 
-// 한 턴에 여러 주제(시점/장소/구체적 말 등)를 동시에 물을 때, 주제별로 묶인 선택지 세트
+// 한 턴에 여러 주제(시점/장소/구체적 말 등)를 동시에 물을 때, 주제별로 묶인 선택지 세트.
+// 모든 그룹은 클라이언트에서 항상 복수 선택 + "해당 없음" + 그룹별 직접 입력을 지원한다.
 export interface ChoiceGroup {
   label: string;
   choices: string[];
-  multi_select: boolean;
 }
 
 export interface ChatEntry {
