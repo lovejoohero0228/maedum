@@ -18,6 +18,7 @@ interface ReferenceBank {
   context_tags: string[];
   emotion_words: Record<string, string[]>;
   partner_perspective_words: string[];
+  need_words: string[];
 }
 
 Deno.serve(async (req) => {
@@ -71,7 +72,8 @@ Deno.serve(async (req) => {
       !Array.isArray(bank.context_tags) ||
       typeof bank.emotion_words !== "object" ||
       bank.emotion_words === null ||
-      !Array.isArray(bank.partner_perspective_words)
+      !Array.isArray(bank.partner_perspective_words) ||
+      !Array.isArray(bank.need_words)
     ) {
       throw new Error(`reference bank response missing required fields: ${JSON.stringify(bank)}`);
     }

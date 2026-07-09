@@ -41,7 +41,8 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "partner-bot": "node scripts/partner-bot.mjs"
   },
   "private": true
 }

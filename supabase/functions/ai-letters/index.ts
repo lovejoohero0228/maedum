@@ -25,7 +25,10 @@ interface InputRow {
   context_detail: string | null;
   conflict_scale: number | null;
   emotion_scale: number | null;
+  emotion_words: string[] | null;
+  partner_perspective_words: string[] | null;
   request_raw: string | null;
+  request_need: string | null;
   request_refined: string | null;
   partner_intention: string | null;
   my_reflection: string | null;
@@ -42,7 +45,10 @@ function inputSummary(row: InputRow, name: string, partnerName: string): string 
       context_detail: row.context_detail,
       conflict_scale: row.conflict_scale,
       emotion_scale: row.emotion_scale,
+      emotion_words: row.emotion_words,
+      partner_perspective_words: row.partner_perspective_words,
       request_raw: row.request_raw,
+      request_need: row.request_need,
       request_refined: row.request_refined,
       partner_intention: row.partner_intention,
       my_reflection: row.my_reflection,

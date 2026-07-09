@@ -60,6 +60,7 @@ export interface ConflictInput {
   emotion_scale: number | null;
   emotion_words: string[] | null;
   request_raw: string | null;
+  request_need: string | null;
   request_refined: string | null;
   partner_intention: string | null;
   partner_perspective_words: string[] | null;
@@ -77,6 +78,8 @@ export interface ReferenceBank {
   context_tags: string[];
   emotion_words: Record<string, string[]>;
   partner_perspective_words: string[];
+  // 007 이후 생성된 뱅크에만 존재 — "바라는 것" 뒤의 욕구/이해관계 보기
+  need_words?: string[];
 }
 
 export interface RelationshipProfile {

@@ -58,6 +58,11 @@ function fieldChoiceBank(fieldKey: string, bank: Record<string, unknown> | null)
       if (!words || typeof words !== "object") return "(없음)";
       return Object.values(words as Record<string, string[]>).flat().join(", ");
     }
+    case "request":
+      // 욕구 확인 턴에서 쓸 후보 — refined 멘트 자체는 뱅크 대상이 아님
+      return Array.isArray(bank.need_words)
+        ? `(욕구 확인 그룹 전용 후보 — 상황/멘트 그룹에는 적용하지 말 것) ${bank.need_words.join(", ")}`
+        : "(없음)";
     case "partner_perspective":
       return Array.isArray(bank.partner_perspective_words)
         ? bank.partner_perspective_words.join(", ")
@@ -93,7 +98,9 @@ function summarizeCompletedField(fieldKey: string, input: Record<string, unknown
       const refined = input.request_refined as string | null;
       if (!refined) return null;
       const raw = input.request_raw as string | null;
-      return raw ? `${raw} → ${refined}` : refined;
+      const need = input.request_need as string | null;
+      const base = raw ? `${raw} → ${refined}` : refined;
+      return need ? `${base} (욕구: ${need})` : base;
     }
     case "partner_intention":
       return (input.partner_intention as string | null) ?? null;
@@ -121,8 +128,12 @@ function columnsForField(fieldKey: string, value: string): Record<string, unknow
       return { conflict_scale: Number(m[1]), emotion_scale: Number(m[2]) };
     }
     case "request": {
-      const parsed = JSON.parse(value) as { raw: string; refined: string };
-      return { request_raw: parsed.raw, request_refined: parsed.refined };
+      const parsed = JSON.parse(value) as { raw: string; need?: string; refined: string };
+      return {
+        request_raw: parsed.raw,
+        request_need: parsed.need ?? null,
+        request_refined: parsed.refined,
+      };
     }
     case "emotion_words":
       return { emotion_words: JSON.parse(value) as string[] };
