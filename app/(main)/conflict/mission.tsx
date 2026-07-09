@@ -1,6 +1,6 @@
 // 04단계: 미션 페이퍼 (AGENT.md §4-4)
 // 미션 생성이 끝날 때까지 대기 → 두 컬럼 미션 + 대화 가이드 표시 → 완료
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
+import { generateMission } from '@/services/missionService';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
@@ -29,8 +30,17 @@ export default function Mission() {
   const loadOutputs = useConflictStore((s) => s.loadOutputs);
   const setConflict = useConflictStore((s) => s.setConflict);
   const [busy, setBusy] = useState(false);
+  const regenRequestedRef = useRef(false);
 
-  const missionReady = !!outputs?.mission_a;
+  // 개편 전 형식(마음가짐 없음)은 준비 안 된 것으로 취급 — 아래 effect가 재생성을 요청한다
+  const missionReady = !!outputs?.mission_a && !!outputs?.mindset_a;
+
+  // 미션이 아직 없거나 개편 전 형식이면 생성/재생성 요청 (서버가 새 형식에 한해 멱등 처리)
+  useEffect(() => {
+    if (!conflict || !outputs || missionReady || regenRequestedRef.current) return;
+    regenRequestedRef.current = true;
+    generateMission(conflict.id).catch(() => {});
+  }, [conflict, outputs, missionReady]);
 
   // 미션 생성 완료 감지 — mission_unlocked 상태 변화 구독 + 폴링
   useEffect(() => {

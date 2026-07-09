@@ -51,14 +51,15 @@ Deno.serve(async (req) => {
       return json({ error: "both users must be ready" }, 400);
     }
 
-    // 멱등: 이미 미션 있으면 그대로 반환
+    // 멱등: 이미 "새 형식" 미션이 있으면 그대로 반환.
+    // mindset_a가 없는 레코드는 개편 전 형식이므로 통과시켜 새 형식으로 재생성한다.
     const { data: outputs } = await admin
       .from("conflict_outputs")
       .select("*")
       .eq("conflict_id", conflict_id)
       .single();
     if (!outputs) return json({ error: "outputs not found" }, 404);
-    if (outputs.mission_a) {
+    if (outputs.mission_a && outputs.mindset_a) {
       return json({
         ok: true,
         already: true,
