@@ -274,11 +274,29 @@ Deno.serve(async (req) => {
       })
       .filter((line): line is string => !!line)
       .join("\n");
+    // 이전 항목들에서 사용자가 직접 타이핑한 자유서술 답변은 원문 그대로 별도 블록으로 넘긴다 —
+    // 확정값 요약만으로는 장문 답변에 녹아 있던 다른 항목의 단서(감정, 의도 인식, 바라는 것 등)가
+    // 사라져서, 다음 항목에서 이미 들은 이야기를 처음 듣는 것처럼 다시 묻게 되기 때문.
+    const freeTextAnswers = chatLog
+      .filter(
+        (e) =>
+          e.role === "user" &&
+          e.field !== field_key &&
+          (!e.selections || e.selections.length === 0),
+      )
+      .map((e) => {
+        const label = INPUT_FIELDS.find((f) => f.key === e.field)?.label ?? e.field;
+        return `- ("${label}" 항목에서) ${e.content}`;
+      })
+      .join("\n");
     const currentFieldTurns = chatLog
       .filter((e) => e.field === field_key)
       .map((e) => `${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
       .join("\n");
-    const history = `${completedSummary ? `[이전에 완료된 항목들]\n${completedSummary}\n\n` : ""}[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
+    const history =
+      `${completedSummary ? `[이전에 완료된 항목들 — 최종 확정값]\n${completedSummary}\n\n` : ""}` +
+      `${freeTextAnswers ? `[이전 항목들에서 사용자가 직접 쓴 자유서술 답변 원문 — 힌트 소스]\n${freeTextAnswers}\n\n` : ""}` +
+      `[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
     const system = INPUT_GUIDE_SYSTEM
       .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
       .replace("{relationship_context}", relationshipContext)
