@@ -32,10 +32,18 @@ export interface Conflict {
 }
 
 // 한 턴에 여러 주제(시점/장소/구체적 말 등)를 동시에 물을 때, 주제별로 묶인 선택지 세트.
-// 모든 그룹은 클라이언트에서 항상 복수 선택 + "해당 없음" + 그룹별 직접 입력을 지원한다.
+// 기본은 복수 선택 + "해당 없음" + 그룹별 직접 입력 — 메타데이터로 그룹별 오버라이드 가능.
 export interface ChoiceGroup {
   label: string;
   choices: string[];
+  // 'single'이면 하나만 고르는 그룹 (의도 인식, 반복 여부, 스케일 등). 생략 시 'multi'.
+  select?: 'single' | 'multi';
+  // 'scale'이면 1~10 숫자 스케일 UI로 렌더링 (choices는 "N — 설명" 형태, 서버 고정 룰 전용)
+  kind?: 'scale' | 'list';
+  // false면 "해당 없음" 보기를 붙이지 않는다 (생략 시 true)
+  allow_none?: boolean;
+  // false면 그룹별 직접 입력을 숨긴다 (생략 시 true)
+  allow_custom?: boolean;
 }
 
 export interface ChatEntry {
@@ -159,7 +167,7 @@ export interface ConflictOutputs {
 // ai-input Edge Function의 응답 봉투 (prompts/input_guide.ts 출력 형식)
 export type FlagType = 'warn' | 'ok' | 'purple';
 
-export interface GuideResponse {
+export interface GuideEnvelope {
   type: 'question' | 'clarify' | 'confirm' | 'next';
   flag: FlagType | null;
   flag_text: string | null;
@@ -167,8 +175,16 @@ export interface GuideResponse {
   choice_groups: ChoiceGroup[] | null;
   extracted_value: string | null;
   field_complete: boolean;
+}
+
+export interface GuideResponse extends GuideEnvelope {
   next_field: string | null;
   all_complete: boolean;
+  // field_complete 시 서버가 다음 항목의 첫 질문을 같은 응답에 실어 보낸다 (왕복/대기 1회 절약).
+  // null이면(생성 실패 등) 클라이언트가 startField로 폴백한다.
+  next_question?: (GuideEnvelope & { field: string }) | null;
+  // 다음 항목이 이미 대화로 커버돼 질문 없이 0턴 완료된 경우, 그 항목들의 완료 멘트
+  skipped?: { field: string; message: string }[];
 }
 
 // 02단계 수집 항목 순서 — prompts/input_guide.ts와 동일 키.

@@ -19,6 +19,7 @@ import { answerField, getMyInput, restartFromField, startField } from '@/service
 import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
 import { ChoiceSelector } from '@/components/chat/ChoiceSelector';
+import { ScaleSelector } from '@/components/chat/ScaleSelector';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { colors, fonts } from '@/constants/colors';
 import {
@@ -28,10 +29,21 @@ import {
   type ChoiceGroup,
   type FieldKey,
   type FlagType,
+  type GuideEnvelope,
   type GuideResponse,
 } from '@/lib/types';
 
 const NONE_OF_ABOVE = '해당 없음';
+
+// 자유서술 턴의 입력창 안내 — 사실 수집 단계에서 감정을 유도하지 않도록 항목별로 다르게 쓴다
+const FREE_TEXT_PLACEHOLDER: Record<FieldKey, string> = {
+  trigger_moment: '그때 오간 말이나 행동을 그대로 적어주세요…',
+  hurt_context: '그때 오간 말이나 행동을 그대로 적어주세요…',
+  feelings: '내 마음을 적어주세요…',
+  partner_mind: '상대의 마음을 헤아려 적어주세요…',
+  request: '상대가 해줬으면 하는 말이나 행동을 적어주세요…',
+  my_reflection: '스스로 아쉬웠던 부분을 편하게 적어주세요…',
+};
 
 interface Bubble {
   role: 'user' | 'assistant';
@@ -91,32 +103,73 @@ export default function Input() {
   const scrollToEnd = () =>
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
 
-  const applyResponse = useCallback((res: GuideResponse) => {
-    setBubbles((prev) => [
-      ...prev,
-      {
-        role: 'assistant',
-        content: res.message,
-        flag: res.flag,
-        flagText: res.flag_text,
-        choiceGroups: res.choice_groups,
-      },
-    ]);
-    setGroups(res.choice_groups);
-    setGroupSelections((res.choice_groups ?? []).map(() => []));
-    setCustomChoices((res.choice_groups ?? []).map(() => []));
-    setDirectInputOpen({});
-    setDirectInputText({});
-    setShowTextInput(!res.choice_groups || res.choice_groups.length === 0);
-    scrollToEnd();
+  const pushAssistant = useCallback(
+    (env: {
+      message: string;
+      flag?: FlagType | null;
+      flag_text?: string | null;
+      choice_groups?: ChoiceGroup[] | null;
+    }) => {
+      setBubbles((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: env.message,
+          flag: env.flag ?? null,
+          flagText: env.flag_text ?? null,
+          choiceGroups: env.choice_groups ?? null,
+        },
+      ]);
+    },
+    [],
+  );
 
-    if (res.all_complete) {
-      // 모든 항목 완료 → 상대 대기 화면
-      setTimeout(() => router.replace('/(main)/conflict/waiting'), 1200);
-      return null;
-    }
-    return res.field_complete && res.next_field ? (res.next_field as FieldKey) : null;
-  }, []);
+  // AI 말풍선 추가 + 선택지 그룹/입력창 상태 세팅 (봉투 단위 공통 처리)
+  const applyEnvelope = useCallback(
+    (env: GuideEnvelope) => {
+      pushAssistant(env);
+      setGroups(env.choice_groups);
+      setGroupSelections((env.choice_groups ?? []).map(() => []));
+      setCustomChoices((env.choice_groups ?? []).map(() => []));
+      setDirectInputOpen({});
+      setDirectInputText({});
+      setShowTextInput(!env.choice_groups || env.choice_groups.length === 0);
+      scrollToEnd();
+    },
+    [pushAssistant],
+  );
+
+  const applyResponse = useCallback(
+    (res: GuideResponse) => {
+      applyEnvelope(res);
+      if (res.all_complete) {
+        // 모든 항목 완료 → 상대 대기 화면
+        setShowTextInput(false);
+        setTimeout(() => router.replace('/(main)/conflict/waiting'), 1200);
+        return null;
+      }
+      return res.field_complete && res.next_field ? (res.next_field as FieldKey) : null;
+    },
+    [applyEnvelope],
+  );
+
+  // 응답 전체 처리: 항목 완료 시 서버가 실어 보낸 다음 질문(next_question)과 0턴 완료
+  // 멘트(skipped)를 그대로 반영한다. 피기백이 없으면 startField로 폴백 (왕복 1회 추가).
+  const handleResponse = useCallback(
+    async (res: GuideResponse): Promise<void> => {
+      const next = applyResponse(res);
+      if (!next || !conflict) return;
+      for (const s of res.skipped ?? []) pushAssistant({ message: s.message });
+      setField(next);
+      if (res.next_question) {
+        applyEnvelope(res.next_question);
+        return;
+      }
+      const first = await startField(conflict.id, next);
+      await handleResponse(first);
+    },
+    [applyResponse, applyEnvelope, pushAssistant, conflict],
+  );
 
   // 초기 로드: 저장된 대화 복원 + 현재 항목 첫 질문
   useEffect(() => {
@@ -157,14 +210,14 @@ export default function Input() {
 
         setWaiting(true);
         const res = await startField(conflict.id, current);
-        applyResponse(res);
+        await handleResponse(res);
       } catch (e) {
         showAlert('오류', String(e));
       } finally {
         setWaiting(false);
       }
     })();
-  }, [conflict, session, applyResponse]);
+  }, [conflict, session, handleResponse]);
 
   const send = async (answer: string, selections: string[][] | null = null) => {
     if (!conflict || waiting) return;
@@ -180,13 +233,7 @@ export default function Input() {
     scrollToEnd();
     try {
       const res = await answerField(conflict.id, field, answer, selections);
-      const next = applyResponse(res);
-      if (next) {
-        // 항목 완료 → 다음 항목 첫 질문 자동 요청
-        setField(next);
-        const first = await startField(conflict.id, next);
-        applyResponse(first);
-      }
+      await handleResponse(res);
     } catch (e) {
       showAlert('오류', String(e));
     } finally {
@@ -221,7 +268,7 @@ export default function Input() {
       setField(target);
       scrollToEnd();
       const res = await startField(conflict.id, target);
-      applyResponse(res);
+      await handleResponse(res);
     } catch (e) {
       showAlert('오류', String(e));
     } finally {
@@ -229,13 +276,15 @@ export default function Input() {
     }
   };
 
-  // groupIndex번째 그룹에서 value를 토글 — 그룹마다 항상 복수 선택 가능.
-  // "해당 없음"은 그 그룹의 다른 선택과 배타적으로 동작한다.
-  const onToggleGroupChoice = (groupIndex: number, value: string) => {
+  // groupIndex번째 그룹에서 value를 토글.
+  // single 그룹(스케일/의도 인식 등)은 하나만 유지하고, "해당 없음"은 다른 선택과 배타적이다.
+  const onToggleGroupChoice = (groupIndex: number, value: string, single = false) => {
     setGroupSelections((prev) => {
       const next = prev.map((arr) => arr.slice());
       const current = next[groupIndex] ?? [];
-      if (value === NONE_OF_ABOVE) {
+      if (single) {
+        next[groupIndex] = current.includes(value) ? [] : [value];
+      } else if (value === NONE_OF_ABOVE) {
         next[groupIndex] = current.includes(NONE_OF_ABOVE) ? [] : [NONE_OF_ABOVE];
       } else {
         const withoutNone = current.filter((v) => v !== NONE_OF_ABOVE);
@@ -347,18 +396,17 @@ export default function Input() {
             return (
               <View key={i}>
                 <AIChatBubble message={b.content} flag={b.flag} flagText={b.flagText} />
-                {b.choiceGroups?.length && !isPending
+                {/* 답변이 끝난 그룹은 고른 값만 남긴다 — 안 고른 칩까지 전부 남기면
+                    히스토리가 미선택 칩으로 뒤덮여 "내가 한 말"을 되짚기 어렵다 */}
+                {b.choiceGroups?.length && !isPending && answeredBy?.role === 'user'
                   ? b.choiceGroups.map((g, gi) => {
                       const picked = answeredBy?.selections?.[gi] ?? [];
-                      // 직접 입력했던 값도 칩으로 보이도록, 원래 choices에 없던 선택값을 덧붙인다.
-                      const extra = picked.filter(
-                        (v) => v !== NONE_OF_ABOVE && !g.choices.includes(v),
-                      );
+                      if (!picked.length) return null;
                       return (
                         <View key={gi}>
                           <Text style={styles.groupLabel}>{g.label}</Text>
                           <ChoiceSelector
-                            choices={[...g.choices, ...extra, NONE_OF_ABOVE]}
+                            choices={picked}
                             selected={null}
                             selectedValues={picked}
                             multiple
@@ -388,45 +436,68 @@ export default function Input() {
 
         {!waiting && groups?.length ? (
           <>
-            {groups.map((g, gi) => (
-              <View key={gi}>
-                <Text style={styles.groupLabel}>{g.label}</Text>
-                <ChoiceSelector
-                  choices={[...g.choices, ...(customChoices[gi] ?? []), NONE_OF_ABOVE]}
-                  selected={null}
-                  selectedValues={groupSelections[gi] ?? []}
-                  multiple
-                  groupMode
-                  showFooter={false}
-                  onSelect={() => {}}
-                  onToggle={(v) => onToggleGroupChoice(gi, v)}
-                  color={myColor()}
-                />
-                {directInputOpen[gi] ? (
-                  <View style={styles.groupDirectInputRow}>
-                    <TextInput
-                      style={styles.groupDirectInput}
-                      placeholder="직접 입력…"
-                      placeholderTextColor={colors.ink3}
-                      value={directInputText[gi] ?? ''}
-                      onChangeText={(t) => setDirectInputText((prev) => ({ ...prev, [gi]: t }))}
-                      onSubmitEditing={() => addCustomChoice(gi)}
+            {groups.map((g, gi) => {
+              const isScale = g.kind === 'scale';
+              const single = isScale || g.select === 'single';
+              const noneAllowed = !isScale && g.allow_none !== false;
+              const customAllowed = !isScale && g.allow_custom !== false;
+              const answered = (groupSelections[gi]?.length ?? 0) > 0;
+              return (
+                <View key={gi}>
+                  <Text style={styles.groupLabel}>
+                    {g.label}
+                    {answered ? ' ✓' : ''}
+                  </Text>
+                  {isScale ? (
+                    <ScaleSelector
+                      choices={g.choices}
+                      selectedValue={groupSelections[gi]?.[0] ?? null}
+                      onSelect={(v) => onToggleGroupChoice(gi, v, true)}
+                      color={myColor()}
                     />
-                    <Pressable onPress={() => addCustomChoice(gi)} style={styles.groupDirectAdd}>
-                      <Text style={styles.groupDirectAddText}>추가</Text>
+                  ) : (
+                    <ChoiceSelector
+                      choices={[
+                        ...g.choices,
+                        ...(customChoices[gi] ?? []),
+                        ...(noneAllowed ? [NONE_OF_ABOVE] : []),
+                      ]}
+                      selected={single ? (groupSelections[gi]?.[0] ?? null) : null}
+                      selectedValues={groupSelections[gi] ?? []}
+                      multiple={!single}
+                      groupMode
+                      showFooter={false}
+                      onSelect={() => {}}
+                      onToggle={(v) => onToggleGroupChoice(gi, v, single)}
+                      color={myColor()}
+                    />
+                  )}
+                  {!customAllowed ? null : directInputOpen[gi] ? (
+                    <View style={styles.groupDirectInputRow}>
+                      <TextInput
+                        style={styles.groupDirectInput}
+                        placeholder="직접 입력…"
+                        placeholderTextColor={colors.ink3}
+                        value={directInputText[gi] ?? ''}
+                        onChangeText={(t) => setDirectInputText((prev) => ({ ...prev, [gi]: t }))}
+                        onSubmitEditing={() => addCustomChoice(gi)}
+                      />
+                      <Pressable onPress={() => addCustomChoice(gi)} style={styles.groupDirectAdd}>
+                        <Text style={styles.groupDirectAddText}>추가</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => setDirectInputOpen((prev) => ({ ...prev, [gi]: true }))}
+                      style={styles.groupDirectToggle}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.groupDirectToggleText}>+ 직접 입력</Text>
                     </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    onPress={() => setDirectInputOpen((prev) => ({ ...prev, [gi]: true }))}
-                    style={styles.groupDirectToggle}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.groupDirectToggleText}>+ 직접 입력</Text>
-                  </Pressable>
-                )}
-              </View>
-            ))}
+                  )}
+                </View>
+              );
+            })}
             <View style={styles.groupFooter}>
               <Pressable
                 onPress={onSubmitGroups}
@@ -439,7 +510,9 @@ export default function Input() {
                     !canSubmitGroups && styles.groupSubmitTextDisabled,
                   ]}
                 >
-                  선택 완료
+                  {canSubmitGroups
+                    ? '선택 완료'
+                    : `${groups.filter((_, i) => (groupSelections[i]?.length ?? 0) === 0).length}개 그룹을 골라주세요`}
                 </Text>
               </Pressable>
             </View>
@@ -451,7 +524,7 @@ export default function Input() {
         <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
-            placeholder="내 마음을 적어주세요…"
+            placeholder={FREE_TEXT_PLACEHOLDER[field]}
             placeholderTextColor={colors.ink3}
             value={text}
             onChangeText={setText}

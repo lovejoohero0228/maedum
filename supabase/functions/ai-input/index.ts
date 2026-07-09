@@ -3,7 +3,13 @@
 //   - user_text가 null이면 해당 항목의 첫 질문을 생성
 //   - selections: 클라이언트가 choice_groups에서 실제로 고른 값들 (그룹 순서와 동일한 배열의 배열).
 //     자유 입력 답변이면 undefined/null — user_text는 그 경우에도 항상 사람이 읽을 합쳐진 텍스트다.
-// 응답: INPUT_GUIDE_SYSTEM의 JSON 봉투 + { next_field, all_complete }
+// 응답: INPUT_GUIDE_SYSTEM의 JSON 봉투 + { next_field, all_complete, next_question, skipped }
+//   - next_question: field_complete 턴에 다음 항목의 첫 질문을 같은 응답에 실어 보낸다
+//     (클라이언트 왕복 1회 절약 — 생성 실패 시 null이고 클라이언트가 startField로 폴백)
+//   - skipped: 다음 항목이 이미 대화로 커버돼 0턴 완료된 경우 그 항목들의 완료 멘트
+//
+// 고정 룰 턴(prompts/static_turns.ts): 상황과 무관하게 항상 같은 질문(예: feelings의
+// 스케일+감정 단어)은 AI를 호출하지 않고 즉시 응답하며, 그 답도 룰로 추출한다 — 토큰 0, 지연 0.
 //
 // 필드가 완료되면 extracted_value를 컬럼에 저장하고,
 // 모든 항목(INPUT_FIELDS)이 끝나면 is_complete=TRUE. 상대도 완료면 status='ai_processing'
@@ -19,10 +25,23 @@ import {
   parseModelJson,
 } from "../_shared/utils.ts";
 import { INPUT_GUIDE_SYSTEM, INPUT_FIELDS } from "../../../prompts/input_guide.ts";
+import type { InputField } from "../../../prompts/input_guide.ts";
+import {
+  staticFirstQuestion,
+  staticGroupsFor,
+  staticExtract,
+  STATIC_COMPLETE_MESSAGE,
+} from "../../../prompts/static_turns.ts";
 
 interface ChoiceGroup {
   label: string;
   choices: string[];
+  // 'single'이면 하나만 고르는 그룹 (의도 인식, 반복 여부, 스케일 등). 기본 'multi'.
+  select: "single" | "multi";
+  // 'scale'이면 클라이언트가 숫자 스케일 UI로 렌더링 — 고정 룰 턴 전용, AI는 만들지 않는다
+  kind: "scale" | "list";
+  allow_none: boolean;
+  allow_custom: boolean;
 }
 
 interface GuideEnvelope {
@@ -57,6 +76,10 @@ function normalizeEnvelope(content: string): GuideEnvelope {
           .map((g) => ({
             label: g?.label ?? "",
             choices: Array.isArray(g?.choices) ? g.choices : [],
+            select: g?.select === "single" ? ("single" as const) : ("multi" as const),
+            kind: g?.kind === "scale" ? ("scale" as const) : ("list" as const),
+            allow_none: g?.allow_none !== false,
+            allow_custom: g?.allow_custom !== false,
           }))
           .filter((g) => g.choices.length > 0)
       : null,
@@ -65,15 +88,43 @@ function normalizeEnvelope(content: string): GuideEnvelope {
   };
 }
 
-// 선택지 없는 자유서술 질문이 허용되는 필드 (input_guide의 두 예외가 모두 여기 속함)
-const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "hurt_context"]);
+// 고정 룰 항목의 첫 질문 — 대상이 아니면 null (prompts/static_turns.ts)
+function staticEnvelopeFor(
+  fieldKey: string,
+  bank: Record<string, unknown> | null,
+): GuideEnvelope | null {
+  const q = staticFirstQuestion(
+    fieldKey,
+    bank as { emotion_words?: Record<string, string[]> } | null,
+  );
+  if (!q) return null;
+  return {
+    type: "question",
+    flag: null,
+    flag_text: null,
+    message: q.message,
+    choice_groups: q.choice_groups,
+    extracted_value: null,
+    field_complete: false,
+  };
+}
+
+// 선택지 없는 자유서술 질문이 허용되는 필드 (input_guide의 자유서술 예외 목록과 동일해야 함)
+// trigger_moment/hurt_context: "정확히 어떤 말/행동이었는지"
+// request: 상대가 실제로 해줄 말/행동 한마디, my_reflection: 반성에 내 말로 살 붙이기
+const FREE_TEXT_EXEMPT_FIELDS = new Set([
+  "trigger_moment",
+  "hurt_context",
+  "request",
+  "my_reflection",
+]);
 
 // 보기 생성 여부를 프롬프트에게만 맡기지 않는 룰 기반 검증.
 // 위반 사유 문자열을 반환하면 AI를 재호출한다 (null이면 통과).
 // - field_complete 턴: extracted_value가 반드시 있어야 한다 (없으면 클라이언트가
 //   저장 안 된 채 다음 항목으로 넘어가는 유령 진행이 생긴다).
-// - 질문 턴: choice_groups가 반드시 있어야 한다. 자유서술 턴은 trigger_moment/
-//   first_hurt_moment에서만, 그 필드에서 이미 선택지 질문이 오간 뒤에, 필드당 한 번만.
+// - 질문 턴: choice_groups가 반드시 있어야 한다. 자유서술 턴은 FREE_TEXT_EXEMPT_FIELDS에서만,
+//   그 필드에서 이미 선택지 질문이 오간 뒤에, 필드당 한 번만.
 // 한 항목에서 허용하는 최대 질문 턴 수 — 이걸 넘기면 더 묻지 말고 완료를 요구한다
 // (첫 질문 1턴 + 재질문/자유서술 후속 1턴. 사용자 제출 횟수 최소화가 최우선)
 const MAX_QUESTION_TURNS_PER_FIELD = 2;
@@ -140,9 +191,11 @@ function fieldChoiceBank(fieldKey: string, bank: Record<string, unknown> | null)
     case "trigger_moment":
       return Array.isArray(bank.trigger_categories) ? bank.trigger_categories.join(", ") : "(없음)";
     case "hurt_context":
-      return Array.isArray(bank.context_tags)
-        ? `(맥락 태그 그룹 전용 후보) ${bank.context_tags.join(", ")}`
-        : "(없음)";
+      // 반복 여부/반응 그룹은 서버 고정(static_turns) — AI 몫은 first_hurt 그룹뿐이라 뱅크 불필요
+      return (
+        "(이 항목의 반복 여부/나의 반응/상대의 반응 그룹은 서버가 고정 보기로 자동으로 붙임 — " +
+        "first_hurt 그룹만, 필요할 때만, trigger_moment 답변 기준 상대적 시점으로 자유 구성)"
+      );
     case "feelings": {
       const words = bank.emotion_words;
       if (!words || typeof words !== "object") return "(없음)";
@@ -246,6 +299,132 @@ function columnsForField(fieldKey: string, value: string): Record<string, unknow
   }
 }
 
+interface GenContext {
+  chatLog: ChatEntry[];
+  input: Record<string, unknown>;
+  relationshipContext: string;
+  referenceBank: Record<string, unknown> | null;
+}
+
+// 한 필드에 대한 AI 턴 생성 (시스템 프롬프트 조립 + 검증 재시도 루프).
+// 완료된 항목은 원본 대화(재질문 시도, 요약 멘트 등 포함)를 통째로 넘기지 않고 최종 확정값만
+// 깔끔하게 요약해 넘긴다 — 진행 중이거나 중단된 채 반쯤 답한 기록이 그대로 컨텍스트에 남아
+// 다른 항목의 질문을 오염시키는 것을 막고, 완결된 사실만 재사용 대상이 되게 한다.
+// appendGroups: 혼합 턴용 서버 고정 그룹(static_turns.staticGroupsFor) — 항목의 첫 질문에만
+// 전달되며, AI가 만든 그룹 뒤에 덧붙인 상태로 검증한다 (AI가 그룹을 아예 안 만들어도
+// 고정 그룹이 질문이 되므로 "질문 턴에 choice_groups 없음" 위반이 되지 않는다).
+async function generateEnvelope(
+  field: InputField,
+  userText: string | null,
+  ctx: GenContext,
+  appendGroups: ChoiceGroup[] = [],
+): Promise<GuideEnvelope> {
+  const { chatLog, input, relationshipContext, referenceBank } = ctx;
+
+  const completedSummary = INPUT_FIELDS.filter((f) => f.key !== field.key)
+    .map((f) => {
+      const value = summarizeCompletedField(f.key, input);
+      return value ? `- ${f.label}: ${value}` : null;
+    })
+    .filter((line): line is string => !!line)
+    .join("\n");
+  // 이전 항목들에서 사용자가 직접 타이핑한 자유서술 답변은 원문 그대로 별도 블록으로 넘긴다 —
+  // 확정값 요약만으로는 장문 답변에 녹아 있던 다른 항목의 단서(감정, 의도 인식, 바라는 것 등)가
+  // 사라져서, 다음 항목에서 이미 들은 이야기를 처음 듣는 것처럼 다시 묻게 되기 때문.
+  const freeTextAnswers = chatLog
+    .filter(
+      (e) =>
+        e.role === "user" &&
+        e.field !== field.key &&
+        (!e.selections || e.selections.length === 0),
+    )
+    .map((e) => {
+      const label = INPUT_FIELDS.find((f) => f.key === e.field)?.label ?? e.field;
+      return `- ("${label}" 항목에서) ${e.content}`;
+    })
+    .join("\n");
+  const currentFieldTurns = chatLog
+    .filter((e) => e.field === field.key)
+    .map((e) => `${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
+    .join("\n");
+  const history =
+    `${completedSummary ? `[이전에 완료된 항목들 — 최종 확정값]\n${completedSummary}\n\n` : ""}` +
+    `${freeTextAnswers ? `[이전 항목들에서 사용자가 직접 쓴 자유서술 답변 원문 — 힌트 소스]\n${freeTextAnswers}\n\n` : ""}` +
+    `[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
+  const system = INPUT_GUIDE_SYSTEM
+    .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
+    .replace("{relationship_context}", relationshipContext)
+    .replace("{field_choice_bank}", fieldChoiceBank(field.key, referenceBank))
+    .replace("{chat_history}", history || "(아직 없음)");
+
+  const userMessage = userText ?? `(항목 시작) "${field.label}" 항목의 첫 질문을 해주세요.`;
+
+  // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화.
+  // json_object 모드는 유효한 JSON만 보장할 뿐 스키마/규칙 준수는 보장하지 않으므로,
+  // 룰 기반 검증(envelopeViolation)에 걸리면 위반 사유를 붙여 재생성을 요구한다.
+  const openai = openaiClient();
+  const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: system },
+    { role: "user", content: userMessage },
+  ];
+  // 재시도는 1회로 제한 — 시도마다 사용자 대기 시간이 통째로 늘어난다
+  const MAX_GUIDE_ATTEMPTS = 2;
+  let envelope!: GuideEnvelope;
+  let lastContent = "";
+  let lastViolation: string | null = null;
+  for (let attempt = 0; attempt < MAX_GUIDE_ATTEMPTS; attempt++) {
+    const messages =
+      attempt === 0
+        ? baseMessages
+        : [
+            ...baseMessages,
+            { role: "assistant" as const, content: lastContent },
+            {
+              role: "user" as const,
+              content:
+                `(자동 검증 실패 — 방금 응답은 규칙 위반: ${lastViolation}) ` +
+                "같은 취지의 message와 질문은 유지하되, 규칙을 지킨 완전한 JSON으로 다시 응답하세요. " +
+                "field_complete가 false인 질문 턴에는 반드시 choice_groups(주제별 1~4개 그룹, " +
+                "각 그룹에 이 상황에 맞는 구체적 선택지 문장들)를 포함해야 하고, " +
+                "field_complete가 true라면 extracted_value를 반드시 채워야 합니다.",
+            },
+          ];
+    const response = await openai.chat.completions.create({
+      model: AI_MODEL,
+      max_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages,
+    });
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("no content in response");
+    lastContent = content;
+    envelope = normalizeEnvelope(content);
+    if (appendGroups.length && !envelope.field_complete) {
+      // AI가 지시를 어기고 고정 그룹과 같은 내용의 그룹을 만든 경우 AI 쪽을 버린다
+      // (문장이 절반 이상 겹치면 같은 질문으로 간주 — 표현만 다른 중복은 프롬프트가 막는다)
+      const norm = (s: string) => s.replace(/\s+/g, "");
+      const staticChoices = new Set(appendGroups.flatMap((g) => g.choices).map(norm));
+      const aiGroups = (envelope.choice_groups ?? []).filter((g) => {
+        const dup = g.choices.filter((c) => staticChoices.has(norm(c))).length;
+        return dup < Math.ceil(g.choices.length / 2);
+      });
+      envelope = { ...envelope, choice_groups: [...aiGroups, ...appendGroups] };
+    }
+    lastViolation = envelopeViolation(envelope, field.key, chatLog);
+    if (!lastViolation) break;
+    console.warn(
+      `guide envelope invalid (attempt ${attempt + 1}/${MAX_GUIDE_ATTEMPTS}, field ${field.key}): ${lastViolation}`,
+    );
+  }
+  // 재시도까지 전부 실패한 경우의 안전판:
+  // - 값 없는 field_complete는 저장 없이 다음 항목으로 넘어가는 유령 진행을 만들므로 강제로 되돌린다.
+  // - choice_groups 없는 질문은 클라이언트가 자유입력 폴백을 띄우므로 그대로 내보낸다 (500보다 낫다).
+  if (envelope.field_complete && !envelope.extracted_value) {
+    envelope.field_complete = false;
+  }
+  return envelope;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -323,104 +502,50 @@ Deno.serve(async (req) => {
       2,
     );
 
-    // 시스템 프롬프트 조립
-    // 완료된 항목은 원본 대화(재질문 시도, 요약 멘트 등 포함)를 통째로 넘기지 않고 최종 확정값만
-    // 깔끔하게 요약해 넘긴다 — 진행 중이거나 중단된 채 반쯤 답한 기록이 그대로 컨텍스트에 남아
-    // 다른 항목의 질문을 오염시키는 것을 막고, 완결된 사실만 재사용 대상이 되게 한다.
-    const completedSummary = INPUT_FIELDS.filter((f) => f.key !== field_key)
-      .map((f) => {
-        const value = summarizeCompletedField(f.key, input);
-        return value ? `- ${f.label}: ${value}` : null;
-      })
-      .filter((line): line is string => !!line)
-      .join("\n");
-    // 이전 항목들에서 사용자가 직접 타이핑한 자유서술 답변은 원문 그대로 별도 블록으로 넘긴다 —
-    // 확정값 요약만으로는 장문 답변에 녹아 있던 다른 항목의 단서(감정, 의도 인식, 바라는 것 등)가
-    // 사라져서, 다음 항목에서 이미 들은 이야기를 처음 듣는 것처럼 다시 묻게 되기 때문.
-    const freeTextAnswers = chatLog
-      .filter(
-        (e) =>
-          e.role === "user" &&
-          e.field !== field_key &&
-          (!e.selections || e.selections.length === 0),
-      )
-      .map((e) => {
-        const label = INPUT_FIELDS.find((f) => f.key === e.field)?.label ?? e.field;
-        return `- ("${label}" 항목에서) ${e.content}`;
-      })
-      .join("\n");
-    const currentFieldTurns = chatLog
-      .filter((e) => e.field === field_key)
-      .map((e) => `${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
-      .join("\n");
-    const history =
-      `${completedSummary ? `[이전에 완료된 항목들 — 최종 확정값]\n${completedSummary}\n\n` : ""}` +
-      `${freeTextAnswers ? `[이전 항목들에서 사용자가 직접 쓴 자유서술 답변 원문 — 힌트 소스]\n${freeTextAnswers}\n\n` : ""}` +
-      `[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
-    const system = INPUT_GUIDE_SYSTEM
-      .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
-      .replace("{relationship_context}", relationshipContext)
-      .replace(
-        "{field_choice_bank}",
-        fieldChoiceBank(field_key, relationshipProfile?.reference_bank ?? null),
-      )
-      .replace("{chat_history}", history || "(아직 없음)");
+    const referenceBank = (relationshipProfile?.reference_bank ?? null) as
+      | Record<string, unknown>
+      | null;
+    const genCtx: GenContext = { chatLog, input, relationshipContext, referenceBank };
 
-    const userMessage = user_text
-      ? user_text
-      : `(항목 시작) "${field.label}" 항목의 첫 질문을 해주세요.`;
-
-    // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화.
-    // json_object 모드는 유효한 JSON만 보장할 뿐 스키마/규칙 준수는 보장하지 않으므로,
-    // 룰 기반 검증(envelopeViolation)에 걸리면 위반 사유를 붙여 재생성을 요구한다.
-    const openai = openaiClient();
-    const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-      { role: "system", content: system },
-      { role: "user", content: userMessage },
-    ];
-    // 재시도는 1회로 제한 — 시도마다 사용자 대기 시간이 통째로 늘어난다
-    const MAX_GUIDE_ATTEMPTS = 2;
-    let envelope!: GuideEnvelope;
-    let lastContent = "";
-    let lastViolation: string | null = null;
-    for (let attempt = 0; attempt < MAX_GUIDE_ATTEMPTS; attempt++) {
-      const messages =
-        attempt === 0
-          ? baseMessages
-          : [
-              ...baseMessages,
-              { role: "assistant" as const, content: lastContent },
-              {
-                role: "user" as const,
-                content:
-                  `(자동 검증 실패 — 방금 응답은 규칙 위반: ${lastViolation}) ` +
-                  "같은 취지의 message와 질문은 유지하되, 규칙을 지킨 완전한 JSON으로 다시 응답하세요. " +
-                  "field_complete가 false인 질문 턴에는 반드시 choice_groups(주제별 1~4개 그룹, " +
-                  "각 그룹에 이 상황에 맞는 구체적 선택지 문장들)를 포함해야 하고, " +
-                  "field_complete가 true라면 extracted_value를 반드시 채워야 합니다.",
-              },
-            ];
-      const response = await openai.chat.completions.create({
-        model: AI_MODEL,
-        max_tokens: 1024,
-        response_format: { type: "json_object" },
-        messages,
-      });
-      const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error("no content in response");
-      lastContent = content;
-      envelope = normalizeEnvelope(content);
-      lastViolation = envelopeViolation(envelope, field_key, chatLog);
-      if (!lastViolation) break;
-      console.warn(
-        `guide envelope invalid (attempt ${attempt + 1}/${MAX_GUIDE_ATTEMPTS}, field ${field_key}): ${lastViolation}`,
-      );
+    // ── 고정 룰 턴: AI 호출 없이 즉시 처리 (질문/추출 모두 룰이면 이 항목은 토큰 0) ──
+    const hasFieldTurns = chatLog.some((e) => e.field === field_key && e.role === "assistant");
+    const isFirstQuestion = !user_text && !hasFieldTurns;
+    let envelope: GuideEnvelope | null = null;
+    if (isFirstQuestion) {
+      // 항목 첫 질문 — 이 항목의 대화가 아직 없을 때만 (재진입/폴백 재생성은 AI에 맡긴다)
+      envelope = staticEnvelopeFor(field_key, referenceBank);
+    } else if (user_text) {
+      // 직전 질문이 고정 룰 턴(스케일 그룹 포함)이었을 때만 룰 추출을 시도 — AI가 낸 질문의
+      // 답을 스케일로 오해 파싱하는 것을 막는다. 실패하면 AI 폴백.
+      const lastAssistant = [...chatLog]
+        .reverse()
+        .find((e) => e.role === "assistant" && e.field === field_key);
+      if (lastAssistant?.choice_groups?.some((g) => g.kind === "scale")) {
+        const value = staticExtract(
+          field_key,
+          Array.isArray(selections) ? (selections as string[][]) : null,
+        );
+        if (value) {
+          envelope = {
+            type: "next",
+            flag: "ok",
+            flag_text: "좋아요, 이해됐어요",
+            message: STATIC_COMPLETE_MESSAGE[field_key] ?? "",
+            choice_groups: null,
+            extracted_value: value,
+            field_complete: true,
+          };
+        }
+      }
     }
-    // 재시도까지 전부 실패한 경우의 안전판:
-    // - 값 없는 field_complete는 저장 없이 다음 항목으로 넘어가는 유령 진행을 만들므로 강제로 되돌린다.
-    // - choice_groups 없는 질문은 클라이언트가 자유입력 폴백을 띄우므로 그대로 내보낸다 (500보다 낫다).
-    if (envelope.field_complete && !envelope.extracted_value) {
-      envelope.field_complete = false;
+    if (!envelope) {
+      // 혼합 턴: 첫 질문이면 서버 고정 그룹(있다면)을 AI 그룹 뒤에 덧붙인다
+      envelope = await generateEnvelope(
+        field,
+        user_text ?? null,
+        genCtx,
+        isFirstQuestion ? staticGroupsFor(field_key) : [],
+      );
     }
 
     // 대화 로그 누적
@@ -440,19 +565,70 @@ Deno.serve(async (req) => {
       choice_groups: envelope.choice_groups,
     });
 
-    const patch: Record<string, unknown> = { chat_log: chatLog };
-
-    // 필드 완료 → 값 저장
-    let allComplete = false;
+    // 필드 완료 → 컬럼 값 수집 (DB 반영은 마지막에 한 번)
+    const savedColumns: Record<string, unknown> = {};
     if (envelope.field_complete && envelope.extracted_value) {
-      Object.assign(patch, columnsForField(field_key, envelope.extracted_value));
+      Object.assign(savedColumns, columnsForField(field_key, envelope.extracted_value));
+    }
 
-      const isLastField = INPUT_FIELDS[INPUT_FIELDS.length - 1].key === field_key;
-      if (isLastField) {
-        patch.is_complete = true;
-        patch.completed_at = new Date().toISOString();
-        allComplete = true;
+    // ── 다음 항목 첫 질문 피기백 ──
+    // field_complete면 다음 항목의 첫 질문을 같은 응답에 실어 보내 클라이언트 왕복을 없앤다.
+    // 다음 항목이 고정 룰이면 즉시, 아니면 AI 1회. 다음 항목이 이미 대화로 커버돼 0턴 완료되면
+    // (프롬프트가 권장하는 최선의 결과) 그 값을 저장하고 그다음 항목으로 계속 간다.
+    let curIdx = INPUT_FIELDS.findIndex((f) => f.key === field_key);
+    let nextQuestion: (GuideEnvelope & { field: string }) | null = null;
+    const skipped: { field: string; message: string }[] = [];
+    if (envelope.field_complete) {
+      try {
+        while (curIdx < INPUT_FIELDS.length - 1) {
+          const nextDef = INPUT_FIELDS[curIdx + 1];
+          // 피기백은 항상 다음 항목의 "첫 질문"이므로 혼합 턴 고정 그룹도 함께 붙인다
+          const nq =
+            staticEnvelopeFor(nextDef.key, referenceBank) ??
+            (await generateEnvelope(
+              nextDef,
+              null,
+              { ...genCtx, input: { ...input, ...savedColumns } },
+              staticGroupsFor(nextDef.key),
+            ));
+          if (nq.field_complete && nq.extracted_value) {
+            // 0턴 완료 — 값 저장이 성공해야만 로그에 남긴다 (실패 시 로그 오염 방지)
+            Object.assign(savedColumns, columnsForField(nextDef.key, nq.extracted_value));
+            chatLog.push({
+              role: "assistant",
+              field: nextDef.key,
+              content: nq.message,
+              choice_groups: null,
+            });
+            skipped.push({ field: nextDef.key, message: nq.message });
+            curIdx += 1;
+            continue;
+          }
+          chatLog.push({
+            role: "assistant",
+            field: nextDef.key,
+            content: nq.message,
+            choice_groups: nq.choice_groups,
+          });
+          nextQuestion = { ...nq, field: nextDef.key };
+          break;
+        }
+      } catch (e) {
+        // 피기백 실패는 이번 턴 응답을 막지 않는다 — 클라이언트가 startField로 폴백
+        console.error("next-question piggyback failed", e);
       }
+    }
+
+    // 마지막 항목까지 완료됐는지 (직접 완료 or 0턴 완료 체인으로 도달)
+    const lastKey = INPUT_FIELDS[INPUT_FIELDS.length - 1].key;
+    const allComplete =
+      (envelope.field_complete && field_key === lastKey) ||
+      skipped.some((s) => s.field === lastKey);
+
+    const patch: Record<string, unknown> = { chat_log: chatLog, ...savedColumns };
+    if (allComplete) {
+      patch.is_complete = true;
+      patch.completed_at = new Date().toISOString();
     }
 
     const { error: updateError } = await admin
@@ -493,14 +669,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 다음 항목 안내
-    const idx = INPUT_FIELDS.findIndex((f) => f.key === field_key);
+    // 다음 항목 안내 — 피기백이 실패했더라도 next_field는 알려줘서 클라이언트가 폴백하게 한다
     const nextField =
-      envelope.field_complete && idx < INPUT_FIELDS.length - 1
-        ? INPUT_FIELDS[idx + 1].key
+      envelope.field_complete && !allComplete && curIdx < INPUT_FIELDS.length - 1
+        ? INPUT_FIELDS[curIdx + 1].key
         : null;
 
-    return json({ ...envelope, next_field: nextField, all_complete: allComplete });
+    return json({
+      ...envelope,
+      next_field: nextField,
+      all_complete: allComplete,
+      next_question: nextQuestion,
+      skipped,
+    });
   } catch (e) {
     console.error(e);
     return json({ error: String(e) }, 500);
