@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { conflict_id } = await req.json();
+    const { conflict_id, force } = await req.json();
 
     // 커플 멤버 본인 확인
     const supaUser = userClient(req);
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       .eq("conflict_id", conflict_id)
       .single();
     if (!outputs) return json({ error: "outputs not found" }, 404);
-    if (outputs.mission_a && outputs.mindset_a) {
+    if (outputs.mission_a && outputs.mindset_a && !force) {
       return json({
         ok: true,
         already: true,

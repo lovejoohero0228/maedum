@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { showAlert } from '@/lib/alert';
+import { showAlert, showConfirm } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
 import { generateMission } from '@/services/missionService';
@@ -70,6 +70,28 @@ export default function Mission() {
       clearInterval(poll);
     };
   }, [conflict, loadOutputs, setConflict]);
+
+  const [regenerating, setRegenerating] = useState(false);
+
+  // 프롬프트/데이터가 개선된 뒤 현재 미션을 새로 뽑아보고 싶을 때
+  const onRegenerate = async () => {
+    if (!conflict || regenerating) return;
+    const ok = await showConfirm(
+      '미션 페이퍼를 다시 만들까요?',
+      '지금 미션은 사라지고, 두 사람의 문답과 편지를 바탕으로 새로 생성돼요.',
+      '다시 만들기',
+    );
+    if (!ok) return;
+    setRegenerating(true);
+    try {
+      await generateMission(conflict.id, true);
+      await loadOutputs();
+    } catch (e) {
+      showAlert('오류', String(e));
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const onResolve = async () => {
     if (!conflict || busy) return;
@@ -162,6 +184,11 @@ export default function Mission() {
         <Text style={styles.doneHint}>
           마무리해도 기록에서 다시 볼 수 있어요.
         </Text>
+        <Pressable onPress={onRegenerate} disabled={regenerating} style={styles.regenButton}>
+          <Text style={styles.regenText}>
+            {regenerating ? '미션을 다시 만드는 중…' : '↺ 미션 다시 만들기'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -223,5 +250,12 @@ const styles = StyleSheet.create({
     color: colors.ink3,
     marginTop: 10,
     fontFamily: fonts.body,
+  },
+  regenButton: { alignItems: 'center', marginTop: 16, padding: 8 },
+  regenText: {
+    fontSize: 12,
+    color: colors.ink3,
+    fontFamily: fonts.bodyMedium,
+    textDecorationLine: 'underline',
   },
 });

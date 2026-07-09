@@ -22,10 +22,10 @@ export async function askInputGuide(
   return data as GuideResponse;
 }
 
-// 04단계: 양쪽 ready 후 미션 페이퍼 생성 요청 (멱등)
-export async function requestMission(conflictId: string): Promise<void> {
+// 04단계: 양쪽 ready 후 미션 페이퍼 생성 요청 (멱등, force면 기존 미션을 버리고 재생성)
+export async function requestMission(conflictId: string, force = false): Promise<void> {
   const { data, error } = await supabase.functions.invoke('ai-mission', {
-    body: { conflict_id: conflictId },
+    body: { conflict_id: conflictId, force },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);

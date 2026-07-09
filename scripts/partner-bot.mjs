@@ -148,8 +148,37 @@ async function main() {
     return;
   }
 
+  if (command === 'rename') {
+    // Windows 콘솔에서 한글 argv가 CP949로 깨져 들어와 프로필 이름이 mojibake로 저장되는
+    // 사고가 있었음 — 기본값은 이 파일(UTF-8) 안의 상수를 쓰고, --name은 필요할 때만.
+    if (!opts.email || !opts.password) {
+      console.error('사용법: node scripts/partner-bot.mjs rename --email bot@test.local --password Test1234! [--name 이름]');
+      process.exit(1);
+    }
+    const supabase = createClient(SUPABASE_URL, ANON_KEY);
+    const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({
+      email: opts.email,
+      password: opts.password,
+    });
+    if (signInError) {
+      console.error('로그인 실패:', signInError.message);
+      process.exit(1);
+    }
+    const newName = opts.name ?? process.env.BOT_NAME ?? '연습상대';
+    const { error: renameError } = await supabase
+      .from('profiles')
+      .update({ display_name: newName })
+      .eq('id', signIn.user.id);
+    if (renameError) {
+      console.error('이름 변경 실패:', renameError.message);
+      process.exit(1);
+    }
+    console.log(`프로필 이름을 "${newName}"(으)로 변경했어요.`);
+    return;
+  }
+
   if (command !== 'run') {
-    console.error('사용법: node scripts/partner-bot.mjs <create|run> [옵션들]');
+    console.error('사용법: node scripts/partner-bot.mjs <create|run|rename> [옵션들]');
     process.exit(1);
   }
 

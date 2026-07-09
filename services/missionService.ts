@@ -2,9 +2,10 @@
 import { requestMission } from '@/lib/ai';
 import type { ConflictOutputs, Couple, MissionItem } from '@/lib/types';
 
-// 두 번째 ready 직후 호출 — 서버가 멱등 처리하므로 중복 호출 안전
-export function generateMission(conflictId: string): Promise<void> {
-  return requestMission(conflictId);
+// 두 번째 ready 직후 호출 — 서버가 멱등 처리하므로 중복 호출 안전.
+// force: 기존 미션을 버리고 새로 생성 (프롬프트 개선 후 재생성용)
+export function generateMission(conflictId: string, force = false): Promise<void> {
+  return requestMission(conflictId, force);
 }
 
 export function missionForMe(
