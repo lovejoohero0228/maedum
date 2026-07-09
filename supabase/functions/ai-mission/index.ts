@@ -15,9 +15,17 @@ import {
 import { MISSION_SYSTEM } from "../../../prompts/mission.ts";
 
 interface MissionResult {
-  mission_a: { text: string; type: "habit" | "acknowledge" | "action" }[];
-  mission_b: { text: string; type: "habit" | "acknowledge" | "action" }[];
-  convo_guide: { step: number; who: "a" | "b" | "both"; text: string }[];
+  mindset_a: string;
+  mindset_b: string;
+  mission_a: { text: string; type: "prevent" | "differently" | "empathy" }[];
+  mission_b: { text: string; type: "prevent" | "differently" | "empathy" }[];
+  convo_guide: {
+    step: number;
+    who: "a" | "b" | "both";
+    title?: string | null;
+    text: string;
+    listener?: string | null;
+  }[];
   convo_note: string;
 }
 
@@ -54,6 +62,8 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         already: true,
+        mindset_a: outputs.mindset_a,
+        mindset_b: outputs.mindset_b,
         mission_a: outputs.mission_a,
         mission_b: outputs.mission_b,
         convo_guide: outputs.convo_guide,
@@ -91,6 +101,9 @@ Deno.serve(async (req) => {
         A: { 이름: profileA.display_name, ...inputA },
         B: { 이름: profileB.display_name, ...inputB },
         initiator: initiatorLabel,
+        // 실제로 서로에게 전달된 편지 — 미션/대화 가이드가 편지의 문장에 뿌리내리게 한다
+        편지_A가_B에게: outputs.letter_a_to_b,
+        편지_B가_A에게: outputs.letter_b_to_a,
         분석: {
           timing: outputs.analysis_timing,
           temperature: outputs.analysis_temperature,
@@ -119,14 +132,18 @@ Deno.serve(async (req) => {
     if (
       !Array.isArray(mission.mission_a) ||
       !Array.isArray(mission.mission_b) ||
-      !Array.isArray(mission.convo_guide)
+      !Array.isArray(mission.convo_guide) ||
+      typeof mission.mindset_a !== "string" ||
+      typeof mission.mindset_b !== "string"
     ) {
-      throw new Error(`mission response missing required arrays: ${JSON.stringify(mission)}`);
+      throw new Error(`mission response missing required fields: ${JSON.stringify(mission)}`);
     }
 
     const { error: updateError } = await admin
       .from("conflict_outputs")
       .update({
+        mindset_a: mission.mindset_a,
+        mindset_b: mission.mindset_b,
         mission_a: mission.mission_a,
         mission_b: mission.mission_b,
         convo_guide: mission.convo_guide,

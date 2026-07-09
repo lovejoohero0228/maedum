@@ -98,7 +98,15 @@ export interface RelationshipProfile {
   updated_at: string;
 }
 
-export type MissionType = 'habit' | 'acknowledge' | 'action';
+// prevent(재발 방지 습관) / differently(다음엔 다르게) / empathy(이해해볼 상대 속마음)
+// — habit/acknowledge/action은 개편 전에 생성된 레거시 레코드용
+export type MissionType =
+  | 'prevent'
+  | 'differently'
+  | 'empathy'
+  | 'habit'
+  | 'acknowledge'
+  | 'action';
 
 export interface MissionItem {
   text: string;
@@ -108,7 +116,10 @@ export interface MissionItem {
 export interface ConvoStep {
   step: number;
   who: 'a' | 'b' | 'both';
+  // title/listener는 개편 후 생성분에만 존재 (단계 이름 / 그때 상대가 들어줄 자세)
+  title?: string | null;
   text: string;
+  listener?: string | null;
 }
 
 export interface AnalysisTiming {
@@ -136,6 +147,8 @@ export interface ConflictOutputs {
   analysis_timing: string | null;        // JSON 문자열 (AnalysisTiming)
   analysis_temperature: string | null;   // JSON 문자열 (AnalysisTemperature)
   analysis_understanding: string | null; // JSON 문자열 (AnalysisUnderstanding)
+  mindset_a: string | null;
+  mindset_b: string | null;
   mission_a: MissionItem[] | null;
   mission_b: MissionItem[] | null;
   convo_guide: ConvoStep[] | null;

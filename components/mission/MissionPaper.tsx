@@ -17,7 +17,7 @@ function MissionColumn({ name, color, missions }: MissionColumnProps) {
       <Text style={[styles.columnTitle, { color: theme.text }]}>{name}의 미션</Text>
       {missions.map((m, i) => (
         <View key={i} style={styles.item}>
-          <Text style={styles.itemIcon}>{missionIcon[m.type]}</Text>
+          <Text style={styles.itemIcon}>{missionIcon[m.type] ?? '✦'}</Text>
           <Text style={styles.itemText}>{m.text}</Text>
         </View>
       ))}

@@ -17,7 +17,7 @@ import { resolveConflict } from '@/services/conflictService';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, userTheme } from '@/constants/colors';
 
 export default function Mission() {
   const session = useConflictStore((s) => s.session);
@@ -90,6 +90,11 @@ export default function Mission() {
   const iAmA = couple.user_a_id === session.user.id;
   const nameA = iAmA ? (profile?.display_name ?? 'A') : (partner?.display_name ?? 'A');
   const nameB = iAmA ? (partner?.display_name ?? 'B') : (profile?.display_name ?? 'B');
+  // 내 마음가짐을 먼저 보여준다
+  const mindsets = [
+    { name: iAmA ? nameA : nameB, text: iAmA ? outputs.mindset_a : outputs.mindset_b, color: iAmA ? 'blue' : 'coral' } as const,
+    { name: iAmA ? nameB : nameA, text: iAmA ? outputs.mindset_b : outputs.mindset_a, color: iAmA ? 'coral' : 'blue' } as const,
+  ].filter((m) => !!m.text);
 
   return (
     <View style={styles.container}>
@@ -99,6 +104,23 @@ export default function Mission() {
         <Text style={styles.hint}>
           과제가 아니라 제안이에요. 할 수 있는 것부터, 천천히.
         </Text>
+
+        {mindsets.length ? (
+          <View style={styles.mindsetCard}>
+            <Text style={styles.mindsetTitle}>🧭 대화 전, 마음에 새겨요</Text>
+            {mindsets.map((m, i) => (
+              <View
+                key={i}
+                style={[styles.mindsetItem, { backgroundColor: userTheme(m.color).tint }]}
+              >
+                <Text style={[styles.mindsetName, { color: userTheme(m.color).text }]}>
+                  {m.name}
+                </Text>
+                <Text style={styles.mindsetText}>{m.text}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <MissionPaper
           nameA={nameA}
@@ -159,6 +181,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: fonts.body,
   },
+  mindsetCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 16,
+    marginVertical: 8,
+  },
+  mindsetTitle: {
+    fontSize: 15,
+    color: colors.ink,
+    fontFamily: fonts.bodyMedium,
+    marginBottom: 10,
+  },
+  mindsetItem: { borderRadius: 12, padding: 12, marginBottom: 8 },
+  mindsetName: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 4 },
+  mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },
   doneButton: {
     backgroundColor: colors.tealMid,
     borderRadius: 14,

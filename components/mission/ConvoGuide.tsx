@@ -32,8 +32,14 @@ export function ConvoGuide({ steps, note, nameA, nameB, colorA, colorB }: ConvoG
             <View style={styles.stepBody}>
               <Text style={[styles.stepWho, { color: whoColor(s.who) }]}>
                 {whoLabel(s.who)}
+                {s.title ? ` · ${s.title}` : ''}
               </Text>
               <Text style={styles.stepText}>{s.text}</Text>
+              {s.listener ? (
+                <View style={styles.listenerBox}>
+                  <Text style={styles.listenerText}>👂 상대는: {s.listener}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
         ))}
@@ -75,6 +81,14 @@ const styles = StyleSheet.create({
   stepBody: { flex: 1 },
   stepWho: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 2 },
   stepText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },
+  listenerBox: {
+    backgroundColor: colors.line2,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 6,
+  },
+  listenerText: { fontSize: 12, lineHeight: 18, color: colors.ink3, fontFamily: fonts.body },
   note: {
     backgroundColor: colors.amberTint,
     borderRadius: 10,

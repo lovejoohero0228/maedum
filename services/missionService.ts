@@ -27,6 +27,10 @@ export function missionForPartner(
 
 // 미션 유형별 아이콘 (AGENT.md §7-4)
 export const missionIcon: Record<MissionItem['type'], string> = {
+  prevent: '🛡️',
+  differently: '🔀',
+  empathy: '💭',
+  // 개편 전 레거시 유형
   habit: '🔄',
   acknowledge: '💡',
   action: '✋',

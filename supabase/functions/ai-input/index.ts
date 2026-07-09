@@ -75,7 +75,8 @@ const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "first_hurt_moment"])
 // - 질문 턴: choice_groups가 반드시 있어야 한다. 자유서술 턴은 trigger_moment/
 //   first_hurt_moment에서만, 그 필드에서 이미 선택지 질문이 오간 뒤에, 필드당 한 번만.
 // 한 항목에서 허용하는 최대 질문 턴 수 — 이걸 넘기면 더 묻지 말고 완료를 요구한다
-const MAX_QUESTION_TURNS_PER_FIELD = 4;
+// (첫 질문 1턴 + 재질문/자유서술 후속 1턴. 사용자 제출 횟수 최소화가 최우선)
+const MAX_QUESTION_TURNS_PER_FIELD = 2;
 
 function envelopeViolation(
   envelope: GuideEnvelope,
@@ -352,7 +353,8 @@ Deno.serve(async (req) => {
       { role: "system", content: system },
       { role: "user", content: userMessage },
     ];
-    const MAX_GUIDE_ATTEMPTS = 3;
+    // 재시도는 1회로 제한 — 시도마다 사용자 대기 시간이 통째로 늘어난다
+    const MAX_GUIDE_ATTEMPTS = 2;
     let envelope!: GuideEnvelope;
     let lastContent = "";
     let lastViolation: string | null = null;
