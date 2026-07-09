@@ -26,6 +26,7 @@ export interface Conflict {
   couple_id: string;
   initiator_id: string;
   status: ConflictStatus;
+  title: string | null; // 주제 요약 제목 — ai-letters가 분석과 함께 생성 (구 레코드는 null)
   created_at: string;
   updated_at: string;
 }

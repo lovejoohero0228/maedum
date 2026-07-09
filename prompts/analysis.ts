@@ -7,6 +7,7 @@ export const ANALYSIS_SYSTEM = `
 
 ## 출력 구조 (JSON으로만 응답)
 {
+  "title": "이 갈등의 주제를 한눈에 알 수 있는 6~12자 제목 (예시 형식: 약속 시간 오해, 연락 빈도 서운함 — 판단/비난 없는 중립적 표현으로)",
   "timing": {
     "person_a": { "name": "", "when": "", "why": "" },
     "person_b": { "name": "", "when": "", "why": "" },

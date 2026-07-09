@@ -148,15 +148,22 @@ Deno.serve(async (req) => {
       const content = res.choices[0]?.message?.content;
       if (!content) throw new Error("no analysis text");
       const parsed = parseModelJson<{
+        title?: unknown;
         timing?: unknown;
         temperature?: unknown;
         understanding?: unknown;
       }>(content);
       // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 섹션 누락을 명시적으로 검증
+      // (title은 목록 표시용 부가 정보라 누락돼도 실패시키지 않는다)
       if (!parsed.timing || !parsed.temperature || !parsed.understanding) {
         throw new Error(`analysis missing required section(s): ${JSON.stringify(parsed)}`);
       }
-      return parsed as { timing: unknown; temperature: unknown; understanding: unknown };
+      return parsed as {
+        title?: unknown;
+        timing: unknown;
+        temperature: unknown;
+        understanding: unknown;
+      };
     }
 
     // 세 호출은 서로 독립 — 병렬 실행
@@ -178,7 +185,10 @@ Deno.serve(async (req) => {
 
     await admin
       .from("conflicts")
-      .update({ status: "letters_delivered" })
+      .update({
+        status: "letters_delivered",
+        title: typeof analysis.title === "string" && analysis.title.trim() ? analysis.title.trim() : null,
+      })
       .eq("id", conflict_id);
 
     await Promise.all([

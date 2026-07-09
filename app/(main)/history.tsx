@@ -34,25 +34,40 @@ export default function History() {
         ListEmptyComponent={
           <Text style={styles.empty}>아직 기록이 없어요.</Text>
         }
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.itemDate}>
-              {new Date(item.created_at).toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <Text
-              style={[
-                styles.itemStatus,
-                item.status === 'resolved' ? styles.resolved : styles.ongoing,
-              ]}
+        renderItem={({ item }) => {
+          const dateText = new Date(item.created_at).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+          return (
+            <Pressable
+              style={styles.item}
+              onPress={() =>
+                router.push({
+                  pathname: '/(main)/conflict/record',
+                  params: { id: item.id, title: item.title ?? '', date: dateText },
+                })
+              }
             >
-              {item.status === 'resolved' ? '✓ 맺음 완료' : '진행 중'}
-            </Text>
-          </View>
-        )}
+              <View style={styles.itemBody}>
+                <Text style={styles.itemTitle} numberOfLines={1}>
+                  {item.title ?? '이날의 맺음'}
+                </Text>
+                <Text style={styles.itemDate}>{dateText}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.itemStatus,
+                  item.status === 'resolved' ? styles.resolved : styles.ongoing,
+                ]}
+              >
+                {item.status === 'resolved' ? '✓ 맺음 완료' : '진행 중'}
+              </Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          );
+        }}
       />
     </View>
   );
@@ -88,8 +103,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  itemDate: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },
+  itemBody: { flex: 1, marginRight: 10 },
+  itemTitle: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
+  itemDate: { fontSize: 12, color: colors.ink3, marginTop: 3, fontFamily: fonts.body },
   itemStatus: { fontSize: 13, fontFamily: fonts.bodyMedium },
+  chevron: { fontSize: 20, color: colors.ink3, marginLeft: 8 },
   resolved: { color: colors.tealText },
   ongoing: { color: colors.purpleText },
 });
