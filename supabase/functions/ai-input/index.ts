@@ -67,6 +67,47 @@ function fieldChoiceBank(fieldKey: string, bank: Record<string, unknown> | null)
   }
 }
 
+// 이미 완료된 항목을 chat_log 원본이 아니라 최종 확정값 한 줄로 요약 (컨텍스트 오염 방지)
+function summarizeCompletedField(fieldKey: string, input: Record<string, unknown>): string | null {
+  switch (fieldKey) {
+    case "trigger_moment":
+      return (input.trigger_moment as string | null) ?? null;
+    case "first_hurt_moment":
+      return (input.first_hurt_moment as string | null) ?? null;
+    case "context": {
+      const detail = input.context_detail as string | null;
+      if (!detail) return null;
+      const tags = (input.context_tags as string[] | null) ?? [];
+      return tags.length ? `${tags.join(", ")} — ${detail}` : detail;
+    }
+    case "scales": {
+      const conflict = input.conflict_scale as number | null;
+      const emotion = input.emotion_scale as number | null;
+      return conflict != null && emotion != null ? `갈등 ${conflict}, 속상함 ${emotion}` : null;
+    }
+    case "emotion_words": {
+      const words = input.emotion_words as string[] | null;
+      return words?.length ? words.join(", ") : null;
+    }
+    case "request": {
+      const refined = input.request_refined as string | null;
+      if (!refined) return null;
+      const raw = input.request_raw as string | null;
+      return raw ? `${raw} → ${refined}` : refined;
+    }
+    case "partner_intention":
+      return (input.partner_intention as string | null) ?? null;
+    case "partner_perspective": {
+      const words = input.partner_perspective_words as string[] | null;
+      return words?.length ? words.join(", ") : null;
+    }
+    case "my_reflection":
+      return (input.my_reflection as string | null) ?? null;
+    default:
+      return null;
+  }
+}
+
 // extracted_value → conflict_inputs 컬럼 매핑
 function columnsForField(fieldKey: string, value: string): Record<string, unknown> {
   switch (fieldKey) {
@@ -159,9 +200,21 @@ Deno.serve(async (req) => {
       : "(관계 프로필 없음)";
 
     // 시스템 프롬프트 조립
-    const history = chatLog
-      .map((e) => `[${e.field}] ${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
+    // 완료된 항목은 원본 대화(재질문 시도, 요약 멘트 등 포함)를 통째로 넘기지 않고 최종 확정값만
+    // 깔끔하게 요약해 넘긴다 — 진행 중이거나 중단된 채 반쯤 답한 기록이 그대로 컨텍스트에 남아
+    // 다른 항목의 질문을 오염시키는 것을 막고, 완결된 사실만 재사용 대상이 되게 한다.
+    const completedSummary = INPUT_FIELDS.filter((f) => f.key !== field_key)
+      .map((f) => {
+        const value = summarizeCompletedField(f.key, input);
+        return value ? `- ${f.label}: ${value}` : null;
+      })
+      .filter((line): line is string => !!line)
       .join("\n");
+    const currentFieldTurns = chatLog
+      .filter((e) => e.field === field_key)
+      .map((e) => `${e.role === "user" ? "사용자" : "AI"}: ${e.content}`)
+      .join("\n");
+    const history = `${completedSummary ? `[이전에 완료된 항목들]\n${completedSummary}\n\n` : ""}[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
     const system = INPUT_GUIDE_SYSTEM
       .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
       .replace("{relationship_context}", relationshipContext)
