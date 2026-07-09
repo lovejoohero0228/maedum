@@ -74,6 +74,9 @@ const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "first_hurt_moment"])
 //   저장 안 된 채 다음 항목으로 넘어가는 유령 진행이 생긴다).
 // - 질문 턴: choice_groups가 반드시 있어야 한다. 자유서술 턴은 trigger_moment/
 //   first_hurt_moment에서만, 그 필드에서 이미 선택지 질문이 오간 뒤에, 필드당 한 번만.
+// 한 항목에서 허용하는 최대 질문 턴 수 — 이걸 넘기면 더 묻지 말고 완료를 요구한다
+const MAX_QUESTION_TURNS_PER_FIELD = 4;
+
 function envelopeViolation(
   envelope: GuideEnvelope,
   fieldKey: string,
@@ -82,11 +85,42 @@ function envelopeViolation(
   if (envelope.field_complete) {
     return envelope.extracted_value ? null : "field_complete인데 extracted_value가 비어 있음";
   }
-  if (envelope.choice_groups?.length) return null;
+  const fieldTurns = chatLog.filter((e) => e.field === fieldKey && e.role === "assistant");
+
+  // 질문이 늘어지는 것 자체를 차단 — 사용자가 이미 여러 번 답했는데 계속 되묻는 루프 방지
+  if (fieldTurns.length >= MAX_QUESTION_TURNS_PER_FIELD) {
+    return (
+      `이 항목에서 이미 질문을 ${fieldTurns.length}턴 했음 — 더 묻지 말고 지금까지 받은 답을 종합해 ` +
+      "extracted_value를 채우고 field_complete: true로 응답해야 함"
+    );
+  }
+
+  if (envelope.choice_groups?.length) {
+    // 같은 항목에서 이미 제시한 선택지를 절반 이상 재사용한 그룹 = 같은 질문의 반복
+    const normalize = (s: string) => s.replace(/\s+/g, "");
+    const prior = new Set(
+      fieldTurns
+        .flatMap((e) => e.choice_groups ?? [])
+        .flatMap((g) => g.choices)
+        .map(normalize),
+    );
+    if (prior.size) {
+      for (const g of envelope.choice_groups) {
+        const dup = g.choices.filter((c) => prior.has(normalize(c))).length;
+        if (g.choices.length > 0 && dup >= Math.ceil(g.choices.length / 2)) {
+          return (
+            `"${g.label}" 그룹 선택지의 절반 이상이 이 항목에서 이미 제시했던 것과 중복 — ` +
+            "같은 질문을 표현만 바꿔 반복하지 말고, 이미 받은 답으로 field_complete 처리하거나 " +
+            "정말 아직 안 나온 새로운 정보만 물어야 함"
+          );
+        }
+      }
+    }
+    return null;
+  }
   if (!FREE_TEXT_EXEMPT_FIELDS.has(fieldKey)) {
     return "질문 턴에 choice_groups가 없음 (이 필드는 자유서술 예외 대상이 아님)";
   }
-  const fieldTurns = chatLog.filter((e) => e.field === fieldKey && e.role === "assistant");
   if (fieldTurns.length === 0) {
     return "필드의 첫 질문은 반드시 choice_groups를 포함해야 함";
   }

@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
-import { letterForMe } from '@/services/aiLetterService';
+import { letterForMe, letterFromMe } from '@/services/aiLetterService';
 import { parseAnalysis } from '@/services/aiAnalysisService';
 import { markReady } from '@/services/conflictService';
 import { generateMission } from '@/services/missionService';
@@ -36,10 +36,21 @@ export default function Letter() {
   const [myScales, setMyScales] = useState<{ conflict: number; emotion: number } | null>(null);
   const [iAmReady, setIAmReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [letterTab, setLetterTab] = useState<'received' | 'sent'>('received');
 
-  // 편지/분석 로드
+  // 편지/분석 로드 — 단발 호출이 실패하거나(네트워크/일시 오류) 생성 직후 타이밍이 어긋나면
+  // 영원히 로딩에 갇히므로, outputs가 도착할 때까지 짧은 간격으로 재시도한다.
   useEffect(() => {
-    loadOutputs();
+    const tick = () => loadOutputs().catch(() => {});
+    tick();
+    const timer = setInterval(() => {
+      if (useConflictStore.getState().outputs) {
+        clearInterval(timer);
+        return;
+      }
+      tick();
+    }, 2500);
+    return () => clearInterval(timer);
   }, [loadOutputs]);
 
   // 내 갈등 크기 수치 (IntensityBar용)
@@ -115,11 +126,13 @@ export default function Letter() {
     return (
       <View style={[styles.container, styles.loading]}>
         <ActivityIndicator size="large" color={colors.purpleMid} />
+        <Text style={styles.loadingText}>편지를 불러오는 중…</Text>
       </View>
     );
   }
 
-  const letter = letterForMe(outputs, couple, session.user.id);
+  const receivedLetter = letterForMe(outputs, couple, session.user.id);
+  const sentLetter = letterFromMe(outputs, couple, session.user.id);
   const analysis = parseAnalysis(outputs);
   const partnerColor = myColor() === 'blue' ? 'coral' : 'blue';
   const partnerName = partner?.display_name ?? '상대';
@@ -128,13 +141,61 @@ export default function Letter() {
     <View style={styles.container}>
       <ProgressSteps current={3} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.sectionTitle}>💌 {partnerName}의 속마음</Text>
-        <Text style={styles.sectionHint}>
-          AI가 {partnerName}의 이야기를 당신이 이해할 수 있는 말로 정리했어요.
-        </Text>
-        {letter ? (
-          <LetterCard title={`${partnerName}의 편지`} body={letter} senderColor={partnerColor} />
-        ) : null}
+        <View style={styles.letterTabs}>
+          <Pressable
+            onPress={() => setLetterTab('received')}
+            style={[styles.letterTab, letterTab === 'received' && styles.letterTabActive]}
+          >
+            <Text
+              style={[
+                styles.letterTabText,
+                letterTab === 'received' && styles.letterTabTextActive,
+              ]}
+            >
+              💌 받은 편지
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setLetterTab('sent')}
+            style={[styles.letterTab, letterTab === 'sent' && styles.letterTabActive]}
+          >
+            <Text
+              style={[styles.letterTabText, letterTab === 'sent' && styles.letterTabTextActive]}
+            >
+              ✉️ 내가 보낸 편지
+            </Text>
+          </Pressable>
+        </View>
+
+        {letterTab === 'received' ? (
+          <>
+            <Text style={styles.sectionTitle}>💌 {partnerName}의 속마음</Text>
+            <Text style={styles.sectionHint}>
+              AI가 {partnerName}의 이야기를 당신이 이해할 수 있는 말로 정리했어요.
+            </Text>
+            {receivedLetter ? (
+              <LetterCard
+                title={`${partnerName}의 편지`}
+                body={receivedLetter}
+                senderColor={partnerColor}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>✉️ 내가 전한 속마음</Text>
+            <Text style={styles.sectionHint}>
+              내가 정리한 이야기가 {partnerName}에게 이렇게 전해졌어요.
+            </Text>
+            {sentLetter ? (
+              <LetterCard
+                title={`내가 ${partnerName}에게 보낸 편지`}
+                body={sentLetter}
+                senderColor={myColor()}
+              />
+            ) : null}
+          </>
+        )}
 
         {myScales ? (
           <View style={styles.scalesCard}>
@@ -146,7 +207,9 @@ export default function Letter() {
 
         <Text style={styles.sectionTitle}>🔍 함께 보는 분석</Text>
 
-        {analysis.timing ? (
+        {/* 내부 필드까지 확인하고 렌더 — AI 응답의 스키마 드리프트로 person_a 등이 빠져 있으면
+            undefined 접근으로 화면 전체가 죽어(흰 화면) 버리므로 카드 단위로 건너뛴다 */}
+        {analysis.timing?.person_a && analysis.timing?.person_b ? (
           <AnalysisCard icon="🕐" title="마음이 상한 시점이 달라요">
             <AnalysisText>
               {analysis.timing.person_a.name}: {analysis.timing.person_a.when} —{' '}
@@ -197,6 +260,23 @@ export default function Letter() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   loading: { alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 14, fontSize: 13, color: colors.ink3, fontFamily: fonts.body },
+  letterTabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.line2,
+    borderRadius: 12,
+    padding: 3,
+    gap: 3,
+  },
+  letterTab: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  letterTabActive: { backgroundColor: colors.bgCard },
+  letterTabText: { fontSize: 13, color: colors.ink3, fontFamily: fonts.bodyMedium },
+  letterTabTextActive: { color: colors.ink },
   scroll: { padding: 20, paddingBottom: 40 },
   sectionTitle: {
     fontSize: 17,
