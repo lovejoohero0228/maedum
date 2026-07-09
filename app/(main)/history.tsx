@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { listConflicts } from '@/services/conflictService';
+import { requestHistoryUpdate } from '@/lib/ai';
 import { colors, fonts } from '@/constants/colors';
 import type { Conflict } from '@/lib/types';
 
@@ -13,7 +14,10 @@ export default function History() {
 
   useFocusEffect(
     useCallback(() => {
-      if (couple) listConflicts(couple.id).then(setConflicts).catch(() => {});
+      if (!couple) return;
+      listConflicts(couple.id).then(setConflicts).catch(() => {});
+      // 요약 도입 전에 마무리된 기록의 소급 통합 — 통합할 게 없으면 서버가 no-op
+      requestHistoryUpdate(couple.id).catch(() => {});
     }, [couple]),
   );
 

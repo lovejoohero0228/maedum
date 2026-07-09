@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 
     const { data: couple } = await admin
       .from("couples")
-      .select("user_a_id, user_b_id")
+      .select("user_a_id, user_b_id, history_summary")
       .eq("id", conflict.couple_id)
       .single();
     if (!couple) return json({ error: "couple not found" }, 404);
@@ -134,7 +134,10 @@ Deno.serve(async (req) => {
 
     // 분석: 양쪽 입력 → JSON 3섹션
     async function generateAnalysis() {
-      const both = `## A (${profileA.display_name})\n${inputSummary(inputA, profileA.display_name, profileB.display_name)}\n\n## B (${profileB.display_name})\n${inputSummary(inputB, profileB.display_name, profileA.display_name)}`;
+      const historySection = couple.history_summary
+        ? `\n\n## 지난 맺음 누적 요약 (반복 패턴 참고용)\n${couple.history_summary}`
+        : "";
+      const both = `## A (${profileA.display_name})\n${inputSummary(inputA, profileA.display_name, profileB.display_name)}\n\n## B (${profileB.display_name})\n${inputSummary(inputB, profileB.display_name, profileA.display_name)}${historySection}`;
       const system = ANALYSIS_SYSTEM.replace("{both_inputs}", both);
       const res = await openai.chat.completions.create({
         model: AI_MODEL,

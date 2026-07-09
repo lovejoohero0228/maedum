@@ -282,21 +282,32 @@ Deno.serve(async (req) => {
           .eq("user_id", userId)
           .maybeSingle()
       : { data: null };
+    // 커플 단위 롤링 히스토리 요약 (지난 맺음들의 패턴 — 크기 고정)
+    const { data: coupleRow } = conflict
+      ? await admin
+          .from("couples")
+          .select("history_summary")
+          .eq("id", conflict.couple_id)
+          .maybeSingle()
+      : { data: null };
 
-    const relationshipContext = relationshipProfile
-      ? JSON.stringify(
-          {
-            관계유형: relationshipProfile.relationship_type,
-            사귄기간_개월: relationshipProfile.relationship_duration_months,
-            내_성격: relationshipProfile.my_personality_tags,
-            내가_보는_상대_성격: relationshipProfile.partner_personality_tags,
-            자주_부딪히는_주제: relationshipProfile.frequent_conflict_topics,
-            레퍼런스_뱅크: relationshipProfile.reference_bank,
-          },
-          null,
-          2,
-        )
-      : "(관계 프로필 없음)";
+    const relationshipContext = JSON.stringify(
+      {
+        ...(relationshipProfile
+          ? {
+              관계유형: relationshipProfile.relationship_type,
+              사귄기간_개월: relationshipProfile.relationship_duration_months,
+              내_성격: relationshipProfile.my_personality_tags,
+              내가_보는_상대_성격: relationshipProfile.partner_personality_tags,
+              자주_부딪히는_주제: relationshipProfile.frequent_conflict_topics,
+              레퍼런스_뱅크: relationshipProfile.reference_bank,
+            }
+          : { 관계프로필: "(없음)" }),
+        지난_맺음_누적요약: coupleRow?.history_summary ?? "(아직 없음)",
+      },
+      null,
+      2,
+    );
 
     // 시스템 프롬프트 조립
     // 완료된 항목은 원본 대화(재질문 시도, 요약 멘트 등 포함)를 통째로 넘기지 않고 최종 확정값만

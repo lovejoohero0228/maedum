@@ -31,6 +31,16 @@ export async function requestMission(conflictId: string, force = false): Promise
   if (data?.error) throw new Error(data.error);
 }
 
+// 커플 롤링 히스토리 요약 갱신 — resolved됐지만 아직 통합 안 된 맺음들을 요약에 합친다.
+// 통합할 것이 없으면 서버가 no-op이라 반복 호출에 안전. fire-and-forget으로 쓴다.
+export async function requestHistoryUpdate(coupleId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('ai-history', {
+    body: { couple_id: coupleId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
 // 관계 프로필 설정/수정 완료 시 개인화 레퍼런스 뱅크 생성 요청
 export async function requestReferenceBank(profileId: string): Promise<ReferenceBank> {
   const { data, error } = await supabase.functions.invoke('ai-reference-bank', {

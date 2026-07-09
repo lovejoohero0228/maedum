@@ -15,6 +15,7 @@ import { showAlert, showConfirm } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
 import { generateMission } from '@/services/missionService';
+import { requestHistoryUpdate } from '@/lib/ai';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
@@ -98,6 +99,8 @@ export default function Mission() {
     setBusy(true);
     try {
       await resolveConflict(conflict.id);
+      // 이번 맺음을 커플 히스토리 요약에 통합 (백그라운드 — 실패해도 다음 기회에 소급됨)
+      requestHistoryUpdate(conflict.couple_id).catch(() => {});
       setConflict(null);
       router.replace('/(main)/home');
     } catch (e) {

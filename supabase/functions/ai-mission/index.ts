@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     const isRegeneration = !!outputs.mission_a;
     const { data: couple } = await admin
       .from("couples")
-      .select("user_a_id, user_b_id")
+      .select("user_a_id, user_b_id, history_summary")
       .eq("id", conflict!.couple_id)
       .single();
     const { data: inputs } = await admin
@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
         // 실제로 서로에게 전달된 편지 — 미션/대화 가이드가 편지의 문장에 뿌리내리게 한다
         편지_A가_B에게: outputs.letter_a_to_b,
         편지_B가_A에게: outputs.letter_b_to_a,
+        지난_맺음_누적요약: couple!.history_summary ?? "(아직 없음)",
         분석: {
           timing: outputs.analysis_timing,
           temperature: outputs.analysis_temperature,
