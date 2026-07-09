@@ -14,14 +14,15 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
-import { showAlert } from '@/lib/alert';
-import { answerField, getMyInput, startField } from '@/services/aiInputService';
+import { showAlert, showConfirm } from '@/lib/alert';
+import { answerField, getMyInput, restartFromField, startField } from '@/services/aiInputService';
 import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
 import { ChoiceSelector } from '@/components/chat/ChoiceSelector';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { colors, fonts } from '@/constants/colors';
 import {
+  FIELD_LABELS,
   FIELD_ORDER,
   type ChatEntry,
   type ChoiceGroup,
@@ -41,6 +42,15 @@ interface Bubble {
   choiceGroups?: ChoiceGroup[] | null;
   // user: 선택지에서 답한 경우 choiceGroups와 같은 순서의 선택값들 (직접 입력이면 null)
   selections?: string[][] | null;
+}
+
+function bubblesFromLog(chatLog: ChatEntry[]): Bubble[] {
+  return chatLog.map((e) => ({
+    role: e.role,
+    content: e.content,
+    choiceGroups: e.choice_groups ?? null,
+    selections: e.selections ?? null,
+  }));
 }
 
 // 저장된 입력에서 다음 수집 항목 계산
@@ -124,14 +134,7 @@ export default function Input() {
         }
         const chatLog = saved?.chat_log ?? [];
         if (chatLog.length) {
-          setBubbles(
-            chatLog.map((e: ChatEntry) => ({
-              role: e.role,
-              content: e.content,
-              choiceGroups: e.choice_groups ?? null,
-              selections: e.selections ?? null,
-            })),
-          );
+          setBubbles(bubblesFromLog(chatLog));
         }
         const current = nextFieldFrom(saved);
         setField(current);
@@ -186,6 +189,41 @@ export default function Input() {
         const first = await startField(conflict.id, next);
         applyResponse(first);
       }
+    } catch (e) {
+      showAlert('오류', String(e));
+    } finally {
+      setWaiting(false);
+    }
+  };
+
+  // target 항목부터(포함) 내 응답을 초기화하고 그 항목의 첫 질문부터 다시 시작.
+  // 뒤 항목의 질문은 앞 답변을 근거로 생성되므로 target 이후의 답변도 함께 지워진다.
+  const restartFrom = async (target: FieldKey) => {
+    if (!conflict || !session || waiting) return;
+    const isFullRestart = target === FIELD_ORDER[0];
+    const ok = await showConfirm(
+      isFullRestart ? '내 응답을 처음부터 다시 시작할까요?' : `'${FIELD_LABELS[target]}' 항목부터 다시 답할까요?`,
+      (isFullRestart
+        ? '지금까지 내가 답한 내용이 모두 초기화돼요.'
+        : '이 항목과 그 이후 항목의 내 답변이 초기화돼요.') + ' 상대의 응답에는 영향이 없어요.',
+      '다시 시작',
+    );
+    if (!ok) return;
+    setWaiting(true);
+    setGroups(null);
+    setGroupSelections([]);
+    setCustomChoices([]);
+    setDirectInputOpen({});
+    setDirectInputText({});
+    setShowTextInput(false);
+    setText('');
+    try {
+      const keptLog = await restartFromField(conflict.id, session.user.id, target);
+      setBubbles(bubblesFromLog(keptLog));
+      setField(target);
+      scrollToEnd();
+      const res = await startField(conflict.id, target);
+      applyResponse(res);
     } catch (e) {
       showAlert('오류', String(e));
     } finally {
@@ -248,9 +286,56 @@ export default function Input() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ProgressSteps current={2} />
-      <Text style={styles.fieldProgress}>
-        {fieldIndex} / {FIELD_ORDER.length} 항목
-      </Text>
+      <View style={styles.fieldHeader}>
+        <Text style={styles.fieldProgress}>
+          {fieldIndex} / {FIELD_ORDER.length} 항목
+        </Text>
+        <Pressable
+          onPress={() => restartFrom(FIELD_ORDER[0])}
+          disabled={waiting}
+          hitSlop={8}
+        >
+          <Text style={[styles.restartAll, waiting && styles.chipDisabledText]}>
+            ↺ 처음부터 다시
+          </Text>
+        </Pressable>
+      </View>
+      {/* 항목 네비게이터 — 이미 지나온 항목을 탭하면 그 항목부터 다시 답할 수 있다 */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.fieldChips}
+        contentContainerStyle={styles.fieldChipsContent}
+      >
+        {FIELD_ORDER.map((f, i) => {
+          const isCurrent = f === field;
+          const isPast = i < fieldIndex - 1;
+          return (
+            <Pressable
+              key={f}
+              disabled={!isPast || waiting}
+              onPress={() => restartFrom(f)}
+              style={[
+                styles.chip,
+                isCurrent && { borderColor: myColor(), backgroundColor: colors.bgCard },
+                !isPast && !isCurrent && styles.chipFuture,
+              ]}
+              hitSlop={4}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  isCurrent && { color: myColor() },
+                  isPast && styles.chipPastText,
+                  !isPast && !isCurrent && styles.chipDisabledText,
+                ]}
+              >
+                {isPast ? `${FIELD_LABELS[f]} ↺` : FIELD_LABELS[f]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       <ScrollView
         ref={scrollRef}
@@ -389,13 +474,38 @@ export default function Input() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  fieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
   fieldProgress: {
-    textAlign: 'center',
     fontSize: 12,
     color: colors.ink3,
-    marginBottom: 4,
     fontFamily: fonts.body,
   },
+  restartAll: {
+    fontSize: 12,
+    color: colors.ink3,
+    fontFamily: fonts.bodyMedium,
+    textDecorationLine: 'underline',
+  },
+  fieldChips: { flexGrow: 0, marginBottom: 4 },
+  fieldChipsContent: { paddingHorizontal: 16, gap: 6 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: colors.bgCard,
+  },
+  chipFuture: { backgroundColor: 'transparent', borderColor: colors.line2 },
+  chipText: { fontSize: 11, fontFamily: fonts.bodyMedium, color: colors.ink2 },
+  chipPastText: { color: colors.ink2 },
+  chipDisabledText: { color: colors.ink3, opacity: 0.6 },
   chat: { flex: 1 },
   chatContent: { padding: 16, paddingBottom: 24 },
   typing: {
