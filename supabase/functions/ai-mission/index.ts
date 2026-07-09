@@ -74,9 +74,11 @@ Deno.serve(async (req) => {
 
     const { data: conflict } = await admin
       .from("conflicts")
-      .select("couple_id, initiator_id")
+      .select("couple_id, initiator_id, status")
       .eq("id", conflict_id)
       .single();
+    // 이미 미션이 있었던 경우(구형식 갱신/강제 재생성) — 상태를 되돌리거나 푸시를 또 보내지 않는다
+    const isRegeneration = !!outputs.mission_a;
     const { data: couple } = await admin
       .from("couples")
       .select("user_a_id, user_b_id")
@@ -153,15 +155,20 @@ Deno.serve(async (req) => {
       .eq("conflict_id", conflict_id);
     if (updateError) throw updateError;
 
-    await admin
-      .from("conflicts")
-      .update({ status: "mission_unlocked" })
-      .eq("id", conflict_id);
+    // resolved(마무리된) 갈등의 미션을 재생성한 경우 상태를 되살리면 안 된다
+    if (conflict!.status !== "resolved" && conflict!.status !== "mission_unlocked") {
+      await admin
+        .from("conflicts")
+        .update({ status: "mission_unlocked" })
+        .eq("id", conflict_id);
+    }
 
-    await Promise.all([
-      sendPush(profileA.push_token, "맺음", "미션 페이퍼가 열렸어요 ✉️", { conflict_id }),
-      sendPush(profileB.push_token, "맺음", "미션 페이퍼가 열렸어요 ✉️", { conflict_id }),
-    ]);
+    if (!isRegeneration) {
+      await Promise.all([
+        sendPush(profileA.push_token, "맺음", "미션 페이퍼가 열렸어요 ✉️", { conflict_id }),
+        sendPush(profileB.push_token, "맺음", "미션 페이퍼가 열렸어요 ✉️", { conflict_id }),
+      ]);
+    }
 
     return json({ ok: true, ...mission });
   } catch (e) {
