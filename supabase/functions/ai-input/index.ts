@@ -66,7 +66,7 @@ function normalizeEnvelope(content: string): GuideEnvelope {
 }
 
 // 선택지 없는 자유서술 질문이 허용되는 필드 (input_guide의 두 예외가 모두 여기 속함)
-const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "first_hurt_moment"]);
+const FREE_TEXT_EXEMPT_FIELDS = new Set(["trigger_moment", "hurt_context"]);
 
 // 보기 생성 여부를 프롬프트에게만 맡기지 않는 룰 기반 검증.
 // 위반 사유 문자열을 반환하면 AI를 재호출한다 (null이면 통과).
@@ -139,21 +139,23 @@ function fieldChoiceBank(fieldKey: string, bank: Record<string, unknown> | null)
   switch (fieldKey) {
     case "trigger_moment":
       return Array.isArray(bank.trigger_categories) ? bank.trigger_categories.join(", ") : "(없음)";
-    case "context":
-      return Array.isArray(bank.context_tags) ? bank.context_tags.join(", ") : "(없음)";
-    case "emotion_words": {
+    case "hurt_context":
+      return Array.isArray(bank.context_tags)
+        ? `(맥락 태그 그룹 전용 후보) ${bank.context_tags.join(", ")}`
+        : "(없음)";
+    case "feelings": {
       const words = bank.emotion_words;
       if (!words || typeof words !== "object") return "(없음)";
-      return Object.values(words as Record<string, string[]>).flat().join(", ");
+      return `(감정 단어 그룹 전용 후보) ${Object.values(words as Record<string, string[]>).flat().join(", ")}`;
     }
     case "request":
       // 욕구 확인 턴에서 쓸 후보 — refined 멘트 자체는 뱅크 대상이 아님
       return Array.isArray(bank.need_words)
         ? `(욕구 확인 그룹 전용 후보 — 상황/멘트 그룹에는 적용하지 말 것) ${bank.need_words.join(", ")}`
         : "(없음)";
-    case "partner_perspective":
+    case "partner_mind":
       return Array.isArray(bank.partner_perspective_words)
-        ? bank.partner_perspective_words.join(", ")
+        ? `(상대 기분 헤아리기 그룹 전용 후보) ${bank.partner_perspective_words.join(", ")}`
         : "(없음)";
     default:
       return "(이 항목은 레퍼런스 뱅크 대상이 아님 — 대화 맥락에서 자유롭게 구성)";
@@ -165,22 +167,21 @@ function summarizeCompletedField(fieldKey: string, input: Record<string, unknown
   switch (fieldKey) {
     case "trigger_moment":
       return (input.trigger_moment as string | null) ?? null;
-    case "first_hurt_moment":
-      return (input.first_hurt_moment as string | null) ?? null;
-    case "context": {
+    case "hurt_context": {
+      const firstHurt = input.first_hurt_moment as string | null;
       const detail = input.context_detail as string | null;
-      if (!detail) return null;
+      if (!firstHurt && !detail) return null;
       const tags = (input.context_tags as string[] | null) ?? [];
-      return tags.length ? `${tags.join(", ")} — ${detail}` : detail;
+      const contextPart = detail ? (tags.length ? `${tags.join(", ")} — ${detail}` : detail) : null;
+      return [firstHurt, contextPart].filter(Boolean).join(" / ");
     }
-    case "scales": {
+    case "feelings": {
       const conflict = input.conflict_scale as number | null;
       const emotion = input.emotion_scale as number | null;
-      return conflict != null && emotion != null ? `갈등 ${conflict}, 속상함 ${emotion}` : null;
-    }
-    case "emotion_words": {
       const words = input.emotion_words as string[] | null;
-      return words?.length ? words.join(", ") : null;
+      if (conflict == null && !words?.length) return null;
+      const scalePart = conflict != null ? `갈등 ${conflict}, 속상함 ${emotion}` : null;
+      return [scalePart, words?.length ? words.join(", ") : null].filter(Boolean).join(" / ");
     }
     case "request": {
       const refined = input.request_refined as string | null;
@@ -190,11 +191,11 @@ function summarizeCompletedField(fieldKey: string, input: Record<string, unknown
       const base = raw ? `${raw} → ${refined}` : refined;
       return need ? `${base} (욕구: ${need})` : base;
     }
-    case "partner_intention":
-      return (input.partner_intention as string | null) ?? null;
-    case "partner_perspective": {
+    case "partner_mind": {
+      const intention = input.partner_intention as string | null;
       const words = input.partner_perspective_words as string[] | null;
-      return words?.length ? words.join(", ") : null;
+      if (!intention && !words?.length) return null;
+      return [intention, words?.length ? words.join(", ") : null].filter(Boolean).join(" / ");
     }
     case "my_reflection":
       return (input.my_reflection as string | null) ?? null;
@@ -206,14 +207,24 @@ function summarizeCompletedField(fieldKey: string, input: Record<string, unknown
 // extracted_value → conflict_inputs 컬럼 매핑
 function columnsForField(fieldKey: string, value: string): Record<string, unknown> {
   switch (fieldKey) {
-    case "context": {
-      const parsed = JSON.parse(value) as { tags: string[]; detail: string };
-      return { context_tags: parsed.tags, context_detail: parsed.detail };
+    case "hurt_context": {
+      const parsed = JSON.parse(value) as { first_hurt: string; tags?: string[]; detail: string };
+      return {
+        first_hurt_moment: parsed.first_hurt,
+        context_tags: parsed.tags ?? [],
+        context_detail: parsed.detail,
+      };
     }
-    case "scales": {
-      const m = value.match(/conflict\s*:\s*(\d+)\s*,\s*emotion\s*:\s*(\d+)/i);
-      if (!m) throw new Error(`bad scales value: ${value}`);
-      return { conflict_scale: Number(m[1]), emotion_scale: Number(m[2]) };
+    case "feelings": {
+      const parsed = JSON.parse(value) as { conflict: number; emotion: number; words?: string[] };
+      if (parsed.conflict == null || parsed.emotion == null) {
+        throw new Error(`bad feelings value: ${value}`);
+      }
+      return {
+        conflict_scale: Number(parsed.conflict),
+        emotion_scale: Number(parsed.emotion),
+        emotion_words: parsed.words ?? [],
+      };
     }
     case "request": {
       const parsed = JSON.parse(value) as { raw: string; need?: string; refined: string };
@@ -223,10 +234,13 @@ function columnsForField(fieldKey: string, value: string): Record<string, unknow
         request_refined: parsed.refined,
       };
     }
-    case "emotion_words":
-      return { emotion_words: JSON.parse(value) as string[] };
-    case "partner_perspective":
-      return { partner_perspective_words: JSON.parse(value) as string[] };
+    case "partner_mind": {
+      const parsed = JSON.parse(value) as { intention: string; words?: string[] };
+      return {
+        partner_intention: parsed.intention,
+        partner_perspective_words: parsed.words ?? [],
+      };
+    }
     default:
       return { [fieldKey]: value };
   }

@@ -171,30 +171,25 @@ export interface GuideResponse {
   all_complete: boolean;
 }
 
-// 02단계 수집 항목 순서 (AGENT.md §4-2) — prompts/input_guide.ts와 동일 키
+// 02단계 수집 항목 순서 — prompts/input_guide.ts와 동일 키.
+// 논리 단위 6개 섹션으로 통합: 각 섹션이 여러 DB 컬럼에 대응할 수 있다 (매핑은 ai-input).
 export const FIELD_ORDER = [
-  'trigger_moment',
-  'first_hurt_moment',
-  'context',
-  'scales',
-  'emotion_words',
-  'request',
-  'partner_intention',
-  'partner_perspective',
-  'my_reflection',
+  'trigger_moment', // → trigger_moment
+  'hurt_context', // → first_hurt_moment + context_tags + context_detail
+  'feelings', // → conflict_scale + emotion_scale + emotion_words
+  'request', // → request_raw + request_need + request_refined
+  'partner_mind', // → partner_intention + partner_perspective_words
+  'my_reflection', // → my_reflection
 ] as const;
 
 export type FieldKey = (typeof FIELD_ORDER)[number];
 
 // 항목 네비게이터/재시작 UI용 짧은 라벨 (prompts/input_guide.ts의 label과 동일 의미)
 export const FIELD_LABELS: Record<FieldKey, string> = {
-  trigger_moment: '발화 시점',
-  first_hurt_moment: '기분 상한 순간',
-  context: '맥락',
-  scales: '크기',
-  emotion_words: '감정',
+  trigger_moment: '상황',
+  hurt_context: '상한 순간·맥락',
+  feelings: '내 마음',
   request: '바라는 것',
-  partner_intention: '상대 의도',
-  partner_perspective: '상대 마음',
+  partner_mind: '상대 마음',
   my_reflection: '나의 반성',
 };

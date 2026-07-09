@@ -53,13 +53,10 @@ function parseArgs(argv) {
 
 const FIELD_ORDER = [
   'trigger_moment',
-  'first_hurt_moment',
-  'context',
-  'scales',
-  'emotion_words',
+  'hurt_context',
+  'feelings',
   'request',
-  'partner_intention',
-  'partner_perspective',
+  'partner_mind',
   'my_reflection',
 ];
 
@@ -70,34 +67,22 @@ const ANSWERS = {
     '어제 저녁 8시쯤 카톡으로 이번 주말 약속 얘기하다가, 제가 "그날 야근일 수도 있어"라고 하니까 답장이 갑자기 끊겼어요.',
     '정확히는 어제 저녁 8시 12분쯤, 카톡방에서 주말 약속 얘기하다가 제가 야근 가능성을 말한 직후부터 답장이 없었어요.',
   ],
-  first_hurt_moment: [
-    '사실 그 전날 밤에 제가 먼저 "이번 주 좀 바빠서 시간 못 낼 것 같아"라고 말했는데, "ㅇㅇ 알겠어"라고만 짧게 답했을 때부터 서운했어요.',
-    '그 전날 밤 대화에서 제가 바쁘다고 말했을 때 "알겠어" 한마디로 끝난 게, 지금 생각하면 그때부터 마음이 상하기 시작한 것 같아요.',
+  hurt_context: [
+    '사실 그 전날 밤에 제가 먼저 "이번 주 좀 바빠서 시간 못 낼 것 같아"라고 말했는데, "ㅇㅇ 알겠어"라고만 짧게 답했을 때부터 서운했어요. 이번이 처음이 아니라 지난 2주 동안 비슷한 패턴이 몇 번 반복됐고, 저도 야근 때문에 지쳐 있었어요.',
+    '그 전날 밤 "알겠어" 한마디로 끝난 게 시작이었던 것 같아요. 최근 2주 정도 이런 일이 반복됐고, 갈등이 생기면 저는 대화를 시도하는 편인데 상대는 말수가 줄어드는 편이에요.',
   ],
-  context: [
-    '이번이 처음이 아니라 지난 2주 동안 제가 야근 얘기를 꺼낼 때마다 비슷하게 대화가 짧아지는 느낌이었어요. 저도 요즘 회사 일이 몰려서 계속 피곤한 상태였어요.',
-    '누적된 것도 있어요. 최근 2주 정도 이런 패턴이 몇 번 반복됐고, 저도 야근 때문에 지쳐 있어서 평소보다 예민하게 받아들인 것 같아요.',
-  ],
-  scales: [
-    '갈등 크기는 6 정도, 속상함은 8 정도인 것 같아요.',
-    '다시 생각해보면 갈등은 6, 감정적으로 속상한 정도는 8 정도로 느껴져요.',
-  ],
-  emotion_words: [
-    '서운함, 답답함, 외로움',
-    '서운함, 답답함, 외로움, 불안함',
+  feelings: [
+    '갈등 크기는 6 정도, 속상함은 8 정도예요. 감정은 서운함, 답답함, 외로움이 가까워요.',
+    '갈등은 6, 속상함은 8 정도이고, 서운함이랑 외로움, 약간의 불안함도 있었어요.',
   ],
   request: [
     '제가 바라는 건, 다음에 제가 바쁘다고 말할 때 "그래도 잠깐 통화 5분만 하자"처럼 먼저 다가와주는 거예요.',
     '저한테는 바빠도 서로 연결되어 있다는 안정감이 중요한 것 같아요. 그게 채워지면 짧은 연락으로도 충분해요.',
     '구체적으로는, 제가 바쁘다고 하면 그냥 넘기지 말고 "언제쯤 괜찮아?"라고 한 마디만 물어봐줬으면 해요.',
   ],
-  partner_intention: [
-    '일부러 그런 건 아니라고 생각해요. 그냥 그 사람도 서운해서 말을 줄인 것 같아요.',
-    '악의는 없었다고 봐요. 상대도 서운함을 표현하는 방식이 조용해지는 거라서요.',
-  ],
-  partner_perspective: [
-    '서운함, 지침, 무관심하다고 느꼈을 것 같음',
-    '서운함, 지침, 소외감',
+  partner_mind: [
+    '일부러 그런 건 아니라고 생각해요. 그 사람도 서운해서 말을 줄인 것 같아요. 그 순간 상대도 서운함, 지침, 소외감을 느꼈을 것 같아요.',
+    '악의는 없었다고 봐요. 상대도 서운함을 표현하는 방식이 조용해지는 거라서요. 아마 서운하고 지쳐 있었을 거예요.',
   ],
   my_reflection: [
     '제가 먼저 "바쁘다"고만 말하고 왜 바쁜지, 언제 시간 낼 수 있는지는 설명 안 한 게 아쉬웠어요.',
@@ -261,18 +246,15 @@ async function main() {
 
   const done = {
     trigger_moment: !!existingInput?.trigger_moment,
-    first_hurt_moment: !!existingInput?.first_hurt_moment,
-    context: !!existingInput?.context_detail,
-    scales: existingInput?.conflict_scale != null,
-    emotion_words: !!existingInput?.emotion_words?.length,
+    hurt_context: !!existingInput?.context_detail,
+    feelings: existingInput?.conflict_scale != null,
     request: !!existingInput?.request_refined,
-    partner_intention: !!existingInput?.partner_intention,
-    partner_perspective: !!existingInput?.partner_perspective_words?.length,
+    partner_mind: !!existingInput?.partner_intention,
     my_reflection: !!existingInput?.my_reflection,
   };
 
   if (existingInput?.is_complete) {
-    console.log('이미 7개 항목 입력이 모두 완료된 상태예요.');
+    console.log('이미 모든 항목 입력이 완료된 상태예요.');
   } else {
     for (const fieldKey of FIELD_ORDER) {
       if (done[fieldKey]) {

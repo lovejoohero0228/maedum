@@ -56,15 +56,13 @@ function bubblesFromLog(chatLog: ChatEntry[]): Bubble[] {
 // 저장된 입력에서 다음 수집 항목 계산
 function nextFieldFrom(input: Awaited<ReturnType<typeof getMyInput>>): FieldKey {
   if (!input) return FIELD_ORDER[0];
+  // 섹션의 컬럼들은 field_complete 시 한꺼번에 저장되므로 대표 컬럼 하나로 판단해도 안전
   const done: Record<FieldKey, boolean> = {
     trigger_moment: !!input.trigger_moment,
-    first_hurt_moment: !!input.first_hurt_moment,
-    context: !!input.context_detail,
-    scales: input.conflict_scale != null,
-    emotion_words: !!input.emotion_words?.length,
+    hurt_context: !!input.context_detail,
+    feelings: input.conflict_scale != null,
     request: !!input.request_refined,
-    partner_intention: !!input.partner_intention,
-    partner_perspective: !!input.partner_perspective_words?.length,
+    partner_mind: !!input.partner_intention,
     my_reflection: !!input.my_reflection,
   };
   return FIELD_ORDER.find((f) => !done[f]) ?? FIELD_ORDER[FIELD_ORDER.length - 1];

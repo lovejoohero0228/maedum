@@ -36,13 +36,10 @@ export async function getMyInput(
 // 각 항목이 conflict_inputs에서 차지하는 컬럼 (ai-input의 columnsForField와 대칭)
 const FIELD_COLUMNS: Record<FieldKey, string[]> = {
   trigger_moment: ['trigger_moment'],
-  first_hurt_moment: ['first_hurt_moment'],
-  context: ['context_tags', 'context_detail'],
-  scales: ['conflict_scale', 'emotion_scale'],
-  emotion_words: ['emotion_words'],
+  hurt_context: ['first_hurt_moment', 'context_tags', 'context_detail'],
+  feelings: ['conflict_scale', 'emotion_scale', 'emotion_words'],
   request: ['request_raw', 'request_need', 'request_refined'],
-  partner_intention: ['partner_intention'],
-  partner_perspective: ['partner_perspective_words'],
+  partner_mind: ['partner_intention', 'partner_perspective_words'],
   my_reflection: ['my_reflection'],
 };
 
