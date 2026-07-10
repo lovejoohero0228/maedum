@@ -173,7 +173,7 @@ export default function Record() {
 
         {tab === 'analysis' ? (
           <>
-            <Text style={styles.sectionTitle}>함께 본 분석</Text>
+            <Text style={styles.sectionTitle}>매듭이가 정리한 우리 이야기</Text>
 
             {analysis.timing?.person_a && analysis.timing?.person_b ? (
               <AnalysisCard icon="◷" title="마음이 상한 시점이 달라요">
@@ -247,6 +247,9 @@ export default function Record() {
                   colorB="coral"
                   missionsA={outputs.mission_a ?? []}
                   missionsB={outputs.mission_b ?? []}
+                  smallMissionsA={outputs.small_mission_a ?? []}
+                  smallMissionsB={outputs.small_mission_b ?? []}
+                  missionsBoth={outputs.mission_both ?? []}
                 />
               </>
             ) : null}

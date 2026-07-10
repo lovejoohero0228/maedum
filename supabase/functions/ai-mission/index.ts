@@ -19,6 +19,9 @@ interface MissionResult {
   mindset_b: string;
   mission_a: { text: string; type: "prevent" | "differently" | "empathy" }[];
   mission_b: { text: string; type: "prevent" | "differently" | "empathy" }[];
+  small_mission_a: { text: string }[];
+  small_mission_b: { text: string }[];
+  mission_both: { text: string }[];
   convo_guide: {
     step: number;
     who: "a" | "b" | "both";
@@ -52,14 +55,20 @@ Deno.serve(async (req) => {
     }
 
     // 멱등: 이미 "새 형식" 미션이 있으면 그대로 반환.
-    // mindset_a가 없는 레코드는 개편 전 형식이므로 통과시켜 새 형식으로 재생성한다.
+    // mindset_a나 small_mission_a가 없는 레코드는 개편 전 형식이므로 통과시켜 새 형식으로 재생성한다.
     const { data: outputs } = await admin
       .from("conflict_outputs")
       .select("*")
       .eq("conflict_id", conflict_id)
       .single();
     if (!outputs) return json({ error: "outputs not found" }, 404);
-    if (outputs.mission_a && outputs.mindset_a && !force) {
+    if (
+      outputs.mission_a &&
+      outputs.mindset_a &&
+      outputs.small_mission_a &&
+      outputs.mission_both &&
+      !force
+    ) {
       return json({
         ok: true,
         already: true,
@@ -67,6 +76,9 @@ Deno.serve(async (req) => {
         mindset_b: outputs.mindset_b,
         mission_a: outputs.mission_a,
         mission_b: outputs.mission_b,
+        small_mission_a: outputs.small_mission_a,
+        small_mission_b: outputs.small_mission_b,
+        mission_both: outputs.mission_both,
         convo_guide: outputs.convo_guide,
         convo_note: outputs.convo_note,
       });
@@ -136,6 +148,9 @@ Deno.serve(async (req) => {
     if (
       !Array.isArray(mission.mission_a) ||
       !Array.isArray(mission.mission_b) ||
+      !Array.isArray(mission.small_mission_a) ||
+      !Array.isArray(mission.small_mission_b) ||
+      !Array.isArray(mission.mission_both) ||
       !Array.isArray(mission.convo_guide) ||
       typeof mission.mindset_a !== "string" ||
       typeof mission.mindset_b !== "string"
@@ -150,6 +165,9 @@ Deno.serve(async (req) => {
         mindset_b: mission.mindset_b,
         mission_a: mission.mission_a,
         mission_b: mission.mission_b,
+        small_mission_a: mission.small_mission_a,
+        small_mission_b: mission.small_mission_b,
+        mission_both: mission.mission_both,
         convo_guide: mission.convo_guide,
         convo_note: mission.convo_note,
       })

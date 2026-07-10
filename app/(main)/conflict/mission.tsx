@@ -35,8 +35,12 @@ export default function Mission() {
   const [busy, setBusy] = useState(false);
   const regenRequestedRef = useRef(false);
 
-  // 개편 전 형식(마음가짐 없음)은 준비 안 된 것으로 취급 — 아래 effect가 재생성을 요청한다
-  const missionReady = !!outputs?.mission_a && !!outputs?.mindset_a;
+  // 개편 전 형식(마음가짐/작은 미션/함께 미션 없음)은 준비 안 된 것으로 취급 — 아래 effect가 재생성을 요청한다
+  const missionReady =
+    !!outputs?.mission_a &&
+    !!outputs?.mindset_a &&
+    !!outputs?.small_mission_a &&
+    !!outputs?.mission_both;
 
   // 미션이 아직 없거나 개편 전 형식이면 생성/재생성 요청 (서버가 새 형식에 한해 멱등 처리)
   useEffect(() => {
@@ -121,7 +125,7 @@ export default function Mission() {
         </View>
         <View style={styles.loadingBody}>
           <LinearGradient colors={['#F8E3C4', '#F6D9D6']} style={styles.loadingOrb} />
-          <Text style={styles.loadingText}>미션 페이퍼를 준비하고 있어요…</Text>
+          <Text style={styles.loadingText}>매듭이가 미션 페이퍼를 준비하고 있어요…</Text>
           <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
         </View>
       </View>
@@ -173,6 +177,9 @@ export default function Mission() {
           colorB="coral"
           missionsA={outputs.mission_a ?? []}
           missionsB={outputs.mission_b ?? []}
+          smallMissionsA={outputs.small_mission_a ?? []}
+          smallMissionsB={outputs.small_mission_b ?? []}
+          missionsBoth={outputs.mission_both ?? []}
         />
 
         {outputs.convo_guide ? (

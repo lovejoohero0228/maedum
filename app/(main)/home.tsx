@@ -7,7 +7,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useConflictStore } from '@/store/conflictStore';
 import { supabase } from '@/lib/supabase';
 import { deleteConflict } from '@/services/conflictService';
+import { getOngoingMissions, type OngoingMissionRecord } from '@/services/missionService';
 import { showAlert, showConfirm } from '@/lib/alert';
+import { MissionBoard } from '@/components/home/MissionBoard';
 import { Avatar } from '@/components/ui/Avatar';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, gradients, ui } from '@/constants/colors';
@@ -35,7 +37,7 @@ function routeForStatus(status: ConflictStatus): string {
 const STATUS_LABEL: Record<ConflictStatus, string> = {
   waiting_partner: '상대를 기다리는 중',
   both_inputting: '속마음 입력 중',
-  ai_processing: 'AI가 편지를 쓰는 중',
+  ai_processing: '매듭이가 편지를 쓰는 중',
   letters_delivered: '편지 도착',
   waiting_ready: '대화 준비 중',
   mission_unlocked: '미션 진행 중',
@@ -62,6 +64,20 @@ export default function Home() {
     useCallback(() => {
       loadCouples().catch((e) => console.error('loadCouples failed', e));
     }, [loadCouples]),
+  );
+
+  // 누적 장기(빅) 미션 — 미션이 생성된 맺음들의 노력 목록 (홈 상단 보드)
+  const [ongoing, setOngoing] = useState<OngoingMissionRecord[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!couple) {
+        setOngoing([]);
+        return;
+      }
+      getOngoingMissions(couple.id)
+        .then(setOngoing)
+        .catch(() => {});
+    }, [couple]),
   );
 
   // 연결된 모든 상대에 대해, 그중 누구든 갈등을 시작하면 실시간으로 감지
@@ -174,6 +190,11 @@ export default function Home() {
         </ScrollView>
       ) : null}
 
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.headline}>
         {couple && partner ? (
           <>
@@ -197,6 +218,16 @@ export default function Home() {
           </>
         )}
       </View>
+
+      {couple && partner && session ? (
+        <MissionBoard
+          records={ongoing}
+          myName={profile?.display_name ?? '나'}
+          partnerName={partner.display_name}
+          myIsA={couple.user_a_id === session.user.id}
+          myColor={myColor()}
+        />
+      ) : null}
 
       {!couple ? (
         <Pressable style={styles.whiteCard} onPress={() => router.push('/(main)/pair')}>
@@ -268,6 +299,7 @@ export default function Home() {
           <Text style={styles.footerLink}>프로필</Text>
         </Pressable>
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -309,7 +341,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
   },
   addPartnerIcon: { fontSize: 18, color: colors.ink3 },
-  headline: { marginTop: 36, marginBottom: 28 },
+  body: { flex: 1, marginHorizontal: -24 },
+  bodyContent: { flexGrow: 1, paddingHorizontal: 24 },
+  headline: { marginTop: 36, marginBottom: 24 },
   headlineSub: { ...ui.statementSub, marginTop: 10 },
   coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   coupleNames: {
@@ -382,6 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginTop: 'auto',
+    paddingTop: 28,
     marginBottom: 28,
   },
   footerLink: { fontSize: 13, color: colors.ink3, fontFamily: fonts.body },
