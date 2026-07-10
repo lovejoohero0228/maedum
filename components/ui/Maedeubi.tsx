@@ -11,6 +11,7 @@ const SOURCES = {
   question: require('../../assets/images/maedeubi-question.png'), // 갸웃 + 물음표
   celebrate: require('../../assets/images/maedeubi-celebrate.png'), // 만세 + 머리 리본
   comfort: require('../../assets/images/maedeubi-comfort.png'), // 실을 건네는 위로
+  connect: require('../../assets/images/maedeubi-connect.png'), // 파랑·코랄 두 실을 하나로 잇는 키비주얼
 } as const;
 
 export type MaedeubiVariant = keyof typeof SOURCES;

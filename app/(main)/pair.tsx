@@ -105,7 +105,7 @@ export default function Pair() {
       <Wash />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.charWrap}>
-          <Maedeubi size={64} />
+          <Maedeubi size={88} variant="connect" />
         </View>
         <Text style={ui.statement}>둘을 연결할 차례예요</Text>
         <Text style={styles.subtitle}>

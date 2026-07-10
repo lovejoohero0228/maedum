@@ -43,7 +43,8 @@ export default function Login() {
       <View style={styles.inner}>
         <View style={styles.hero}>
           <View style={styles.heroChar}>
-            <Maedeubi size={72} />
+            {/* 파랑·코랄 두 실을 잇는 키비주얼 — "다시 맺다"의 브랜드 컷 */}
+            <Maedeubi size={88} variant="connect" />
           </View>
           <Text style={styles.logo}>맺음</Text>
           <Text style={styles.tagline}>다툼의 끝을, 다시 맺다</Text>

@@ -201,7 +201,8 @@ export default function Home() {
           <>
             <View style={styles.headlineRow}>
               <View style={styles.headlineChar}>
-                <Maedeubi size={56} />
+                {/* 두 사람의 실(파랑·코랄)을 잇는 키비주얼 */}
+                <Maedeubi size={64} variant="connect" />
               </View>
               <Text style={[ui.statement, styles.headlineText]}>
                 서운했던 마음,{'\n'}정리해서 전해볼까요?
@@ -223,7 +224,7 @@ export default function Home() {
           <>
             <View style={styles.headlineRow}>
               <View style={styles.headlineChar}>
-                <Maedeubi size={56} />
+                <Maedeubi size={64} variant="connect" />
               </View>
               <Text style={[ui.statement, styles.headlineText]}>
                 둘을 연결하는 것부터{'\n'}시작해볼까요?
