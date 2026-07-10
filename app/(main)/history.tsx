@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { listConflicts } from '@/services/conflictService';
 import { requestHistoryUpdate } from '@/lib/ai';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 import type { Conflict } from '@/lib/types';
 
@@ -23,13 +24,13 @@ export default function History() {
 
   return (
     <View style={styles.container}>
+      <Wash />
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.back}>←</Text>
         </Pressable>
-        <Text style={styles.title}>지난 기록</Text>
-        <View style={{ width: 24 }} />
       </View>
+      <Text style={styles.title}>지난 기록</Text>
 
       <FlatList
         data={conflicts}
@@ -77,25 +78,27 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 64 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    marginBottom: 12,
+    marginBottom: 20,
   },
   back: { fontSize: 22, color: colors.ink2 },
-  title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
+  title: {
+    ...ui.statement,
+    paddingHorizontal: 24,
+  },
   list: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
   empty: {
     ...ui.statementSub,
     marginTop: 80,
+    textAlign: 'center',
   },
   item: {
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line2,
+    ...ui.card,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
   itemBody: { flex: 1, marginRight: 10 },
   itemTitle: { fontSize: 16, color: colors.ink, fontFamily: fonts.displayMedium },
   itemDate: { fontSize: 12, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
-  itemStatus: { fontSize: 12, fontFamily: fonts.bodyMedium, letterSpacing: 2 },
+  itemStatus: { fontSize: 12, fontFamily: fonts.bodyMedium },
   resolved: { color: colors.tealText },
   ongoing: { color: colors.ink3 },
 });

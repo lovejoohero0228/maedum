@@ -7,6 +7,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { unpairCouple } from '@/services/conflictService';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Profile() {
@@ -46,36 +47,38 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <Wash />
+      <View style={styles.nav}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.back}>←</Text>
         </Pressable>
-        <Text style={styles.title}>프로필</Text>
-        <View style={{ width: 24 }} />
       </View>
 
+      <Text style={ui.statement}>프로필</Text>
+
       {profile ? (
-        <View style={styles.me}>
-          <Avatar name={profile.display_name} color={myColor()} size={64} />
-          <Text style={styles.name}>{profile.display_name}</Text>
-          <Text style={styles.email}>{session?.user.email}</Text>
+        <View style={[styles.card, styles.meCard]}>
+          <Avatar name={profile.display_name} color={myColor()} size={52} />
+          <View style={styles.meBody}>
+            <Text style={styles.name}>{profile.display_name}</Text>
+            <Text style={styles.email}>{session?.user.email}</Text>
+          </View>
         </View>
       ) : null}
 
-      <View style={styles.divider} />
-
       <Pressable
-        style={styles.section}
+        style={[styles.card, styles.rowCard]}
         onPress={() => router.push('/(main)/relationship-profile')}
       >
-        <Text style={styles.sectionLabel}>관계 정보</Text>
-        <Text style={styles.sectionLink}>관계 정보 수정</Text>
+        <View style={styles.rowBody}>
+          <Text style={styles.cardLabel}>관계 정보</Text>
+          <Text style={styles.rowTitle}>관계 정보 수정</Text>
+        </View>
+        <Text style={styles.arrow}>→</Text>
       </Pressable>
 
-      <View style={styles.divider} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>연결된 상대</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>연결된 상대</Text>
         {couples.length > 0 ? (
           couples.map((c) => {
             const p = partners[c.id];
@@ -102,7 +105,7 @@ export default function Profile() {
           })
         ) : (
           <Pressable onPress={() => router.push('/(main)/pair')}>
-            <Text style={styles.sectionLink}>아직 연결 안 됨 → 연결하기</Text>
+            <Text style={styles.rowTitle}>아직 연결 안 됨 → 연결하기</Text>
           </Pressable>
         )}
         <Pressable onPress={() => router.push('/(main)/pair')} hitSlop={8}>
@@ -111,54 +114,53 @@ export default function Profile() {
       </View>
 
       <Pressable style={styles.logout} onPress={onLogout} hitSlop={8}>
-        <Text style={styles.logoutText}>로그아웃</Text>
+        <Text style={ui.quietCta}>로그아웃</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 24 },
-  header: {
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 64, paddingHorizontal: 24 },
+  nav: { marginBottom: 20 },
+  back: { fontSize: 22, color: colors.ink2 },
+  card: {
+    ...ui.card,
+    marginTop: 16,
+  },
+  meCard: {
+    marginTop: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 36,
+    gap: 14,
   },
-  back: { fontSize: 22, color: colors.ink2 },
-  title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
-  me: { alignItems: 'center' },
+  meBody: { flex: 1 },
   name: {
-    fontSize: 20,
+    fontSize: 19,
     color: colors.ink,
-    marginTop: 14,
     fontFamily: fonts.displayMedium,
   },
-  email: { fontSize: 13, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
-  divider: {
-    height: 1,
-    backgroundColor: colors.line,
-    alignSelf: 'center',
-    width: 48,
-    marginVertical: 32,
+  email: { fontSize: 13, color: colors.ink3, marginTop: 2, fontFamily: fonts.body },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  section: { alignItems: 'center' },
-  sectionLabel: {
-    ...ui.quietCta,
-    fontSize: 12,
-    letterSpacing: 2,
-    marginBottom: 14,
+  rowBody: { flex: 1 },
+  cardLabel: {
+    fontSize: 13,
+    color: colors.ink3,
+    fontFamily: fonts.bodyMedium,
+    marginBottom: 8,
   },
-  sectionLink: { fontSize: 14, color: colors.ink2, fontFamily: fonts.bodyMedium },
+  rowTitle: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
+  arrow: { fontSize: 18, color: colors.ink2 },
   partnerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 8,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
   },
-  partnerName: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
+  partnerName: { flex: 1, fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
   unpairButton: { marginLeft: 12 },
   unpairLink: {
     fontSize: 12,
@@ -170,8 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.ink3,
     fontFamily: fonts.bodyMedium,
-    marginTop: 16,
+    marginTop: 14,
   },
   logout: { marginTop: 'auto', marginBottom: 48, alignItems: 'center' },
-  logoutText: { ...ui.quietCta },
 });

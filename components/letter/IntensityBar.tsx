@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: colors.ink2, fontFamily: fonts.body },
   value: { fontSize: 13, fontFamily: fonts.bodyMedium },
   track: {
-    height: 5,
+    height: 6,
     borderRadius: 100,
     backgroundColor: colors.line2,
     overflow: 'hidden',

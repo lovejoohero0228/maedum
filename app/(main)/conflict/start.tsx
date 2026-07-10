@@ -8,6 +8,7 @@ import { startConflict, joinConflict } from '@/services/conflictService';
 import { sendPushTo } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Start() {
@@ -51,18 +52,27 @@ export default function Start() {
 
   return (
     <View style={styles.container}>
-      <ProgressSteps current={1} />
+      <Wash />
+      <View style={styles.topNav}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={styles.back}>←</Text>
+        </Pressable>
+        <View style={styles.progressWrap}>
+          <ProgressSteps current={1} />
+        </View>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={styles.skip}>다음에</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.body}>
-        <Text style={styles.icon}>❦</Text>
         <Text style={styles.title}>
           {partnerInitiated
-            ? `${partner?.display_name ?? '상대'}가 기다리고 있어요`
-            : '마음을 정리할 준비가 됐나요?'}
+            ? `${partner?.display_name ?? '상대'}가\n기다리고 있어요`
+            : '마음을 정리할\n준비가 됐나요?'}
         </Text>
         <Text style={styles.desc}>
-          지금부터 AI가 몇 가지 질문을 드려요.{'\n'}
-          누가 잘못했는지 따지지 않아요.{'\n'}
+          지금부터 AI가 몇 가지 질문을 드려요. 누가 잘못했는지 따지지 않아요.
           내 마음을 상대가 이해할 수 있는 말로 바꾸는 과정이에요.
         </Text>
 
@@ -73,13 +83,14 @@ export default function Start() {
         </View>
       </View>
 
-      <Pressable onPress={onBegin} disabled={busy} style={styles.begin} hitSlop={12}>
-        <Text style={[styles.beginText, busy && styles.beginDisabled]}>
-          {busy ? '준비 중…' : partnerInitiated ? '탭하여 함께 시작하기' : '탭하여 시작하기'}
+      <Pressable
+        onPress={onBegin}
+        disabled={busy}
+        style={[styles.begin, busy && styles.beginBusy]}
+      >
+        <Text style={ui.primaryPillText}>
+          {busy ? '준비 중…' : partnerInitiated ? '함께 시작하기' : '시작하기'}
         </Text>
-      </Pressable>
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.cancel}>다음에 할게요</Text>
       </Pressable>
     </View>
   );
@@ -87,39 +98,31 @@ export default function Start() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 56 },
-  body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  icon: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
+  topNav: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  back: { fontSize: 20, color: colors.ink },
+  progressWrap: { flex: 1 },
+  skip: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },
+  body: { flex: 1, paddingTop: 36 },
   title: {
     ...ui.statement,
-    marginBottom: 16,
+    fontSize: 28,
+    lineHeight: 42,
+    marginBottom: 14,
   },
   desc: {
     ...ui.statementSub,
-    marginBottom: 36,
+    marginBottom: 32,
   },
   rules: {
-    alignSelf: 'stretch',
-    gap: 6,
+    ...ui.card,
+    gap: 10,
   },
   rule: {
-    fontSize: 13,
-    lineHeight: 21,
-    color: colors.ink3,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-  },
-  begin: { paddingVertical: 10 },
-  beginText: {
-    ...ui.quietCta,
-    color: colors.ink,
-  },
-  beginDisabled: { color: colors.ink3 },
-  cancel: {
-    textAlign: 'center',
-    color: colors.ink3,
-    fontSize: 13,
-    marginTop: 18,
-    marginBottom: 12,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.ink2,
     fontFamily: fonts.body,
   },
+  begin: { ...ui.primaryPill, marginBottom: 12 },
+  beginBusy: { opacity: 0.6 },
 });

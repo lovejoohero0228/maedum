@@ -18,7 +18,8 @@ import { LetterCard } from '@/components/letter/LetterCard';
 import { AnalysisCard, AnalysisText } from '@/components/letter/AnalysisCard';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
-import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
+import { Wash } from '@/components/ui/Wash';
+import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { ConflictOutputs } from '@/lib/types';
 
 export default function Record() {
@@ -77,6 +78,7 @@ export default function Record() {
   if (loading) {
     return (
       <View style={styles.container}>
+        <Wash />
         {header}
         <View style={styles.center}>
           <ActivityIndicator size="small" color={colors.ink3} />
@@ -88,6 +90,7 @@ export default function Record() {
   if (!outputs || !couple || !session) {
     return (
       <View style={styles.container}>
+        <Wash />
         {header}
         <View style={styles.center}>
           <Text style={styles.empty}>
@@ -124,6 +127,7 @@ export default function Record() {
 
   return (
     <View style={styles.container}>
+      <Wash />
       {header}
       <View style={styles.tabs}>
         {tabs.map((t) => (
@@ -317,23 +321,19 @@ const styles = StyleSheet.create({
   },
   regenBox: { alignItems: 'center', gap: 4, marginTop: 20 },
   sectionTitle: {
-    fontSize: 18,
-    color: colors.ink,
-    fontFamily: fonts.displayMedium,
-    textAlign: 'center',
+    ...ui.statement,
+    fontSize: 20,
+    lineHeight: 30,
     marginTop: 24,
     marginBottom: 10,
   },
   mindsetCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingTop: 14,
+    ...ui.card,
   },
   mindsetItem: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2, marginBottom: 14 },
   mindsetName: {
     fontSize: 12,
     fontFamily: fonts.bodyMedium,
-    letterSpacing: 2,
     marginBottom: 4,
   },
   mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },

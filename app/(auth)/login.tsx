@@ -12,6 +12,7 @@ import {
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Login() {
@@ -36,9 +37,9 @@ export default function Login() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <Wash />
       <View style={styles.inner}>
         <View style={styles.hero}>
-          <Text style={styles.mark}>❦</Text>
           <Text style={styles.logo}>맺음</Text>
           <Text style={styles.tagline}>다툼의 끝을, 다시 맺다</Text>
         </View>
@@ -61,19 +62,20 @@ export default function Login() {
             value={password}
             onChangeText={setPassword}
           />
+        </View>
 
+        <View style={styles.footer}>
           <Pressable
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={onLogin}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>{loading ? '로그인 중…' : '로그인'}</Text>
+            <Text style={ui.primaryPillText}>{loading ? '로그인 중…' : '로그인'}</Text>
           </Pressable>
+          <Link href="/(auth)/register" style={styles.link}>
+            아직 계정이 없어요
+          </Link>
         </View>
-
-        <Link href="/(auth)/register" style={styles.link}>
-          아직 계정이 없어요
-        </Link>
       </View>
     </KeyboardAvoidingView>
   );
@@ -81,41 +83,40 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  hero: { alignItems: 'center', marginBottom: 56 },
-  mark: { fontSize: 26, color: colors.ink, marginBottom: 14 },
+  inner: { flex: 1, paddingHorizontal: 24, paddingTop: 140 },
+  hero: { marginBottom: 48 },
   logo: {
-    fontSize: 38,
+    fontSize: 40,
+    lineHeight: 52,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    textAlign: 'center',
   },
   tagline: {
     ...ui.statementSub,
-    marginTop: 10,
+    marginTop: 8,
   },
   form: { alignSelf: 'stretch' },
   input: {
-    borderBottomWidth: 1,
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: colors.line,
-    paddingHorizontal: 2,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
     fontSize: 16,
     color: colors.ink,
-    marginBottom: 18,
+    marginBottom: 12,
     fontFamily: fonts.body,
-    textAlign: 'center',
   },
+  footer: { marginTop: 'auto', marginBottom: 32 },
   button: {
     ...ui.primaryPill,
     alignItems: 'center',
-    marginTop: 28,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: ui.primaryPillText,
   link: {
     ...ui.quietCta,
-    marginTop: 32,
+    marginTop: 20,
     alignSelf: 'center',
   },
 });

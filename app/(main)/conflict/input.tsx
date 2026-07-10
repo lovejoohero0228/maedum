@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { answerField, getMyInput, restartFromField, startField } from '@/services/aiInputService';
+import { Wash } from '@/components/ui/Wash';
 import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
 import { ChoiceSelector } from '@/components/chat/ChoiceSelector';
@@ -331,25 +332,26 @@ export default function Input() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* 얇은 진행 바 — 항목 진행도 (Find Your Faith 상단 바) */}
-      <View style={styles.progressWrap}>
-        <View style={ui.progressTrack}>
-          <View
-            style={[ui.progressFill, { width: `${(fieldIndex / FIELD_ORDER.length) * 100}%` }]}
-          />
+      <Wash height={180} />
+      {/* 상단 내비 — ← + 얇은 진행 바 + 다시 시작 (EMBr 온보딩 상단 바) */}
+      <View style={styles.topNav}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={styles.back}>←</Text>
+        </Pressable>
+        <View style={styles.progressWrap}>
+          <View style={ui.progressTrack}>
+            <View
+              style={[ui.progressFill, { width: `${(fieldIndex / FIELD_ORDER.length) * 100}%` }]}
+            />
+          </View>
         </View>
-      </View>
-      <View style={styles.fieldHeader}>
-        <Text style={styles.fieldProgress}>
-          {fieldIndex} / {FIELD_ORDER.length} 항목
-        </Text>
         <Pressable
           onPress={() => restartFrom(FIELD_ORDER[0])}
           disabled={waiting}
           hitSlop={8}
         >
           <Text style={[styles.restartAll, waiting && styles.chipDisabledText]}>
-            ↺ 처음부터 다시
+            처음부터
           </Text>
         </Pressable>
       </View>
@@ -554,24 +556,19 @@ export default function Input() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 60 },
-  progressWrap: { paddingHorizontal: 24, marginBottom: 14 },
-  fieldHeader: {
+  topNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 4,
+    gap: 14,
+    paddingHorizontal: 24,
+    marginBottom: 14,
   },
-  fieldProgress: {
-    fontSize: 12,
-    color: colors.ink3,
-    fontFamily: fonts.body,
-  },
+  back: { fontSize: 20, color: colors.ink },
+  progressWrap: { flex: 1 },
   restartAll: {
-    fontSize: 12,
-    color: colors.ink3,
-    fontFamily: fonts.bodyMedium,
-    textDecorationLine: 'underline',
+    fontSize: 13,
+    color: colors.ink2,
+    fontFamily: fonts.body,
   },
   fieldChips: { flexGrow: 0, marginBottom: 4 },
   fieldChipsContent: { paddingHorizontal: 24, gap: 6 },
@@ -581,7 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.bgCard,
   },
   chipFuture: { backgroundColor: 'transparent', borderColor: colors.line2 },
   chipText: { fontSize: 11, fontFamily: fonts.bodyMedium, color: colors.ink2 },
@@ -601,7 +598,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.ink3,
     fontFamily: fonts.bodyMedium,
-    letterSpacing: 2,
     marginTop: 10,
     paddingLeft: 36,
   },
@@ -615,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   groupSubmitDisabled: { backgroundColor: colors.line2 },
-  groupSubmitText: { color: colors.bg, fontSize: 14, fontFamily: fonts.bodyMedium },
+  groupSubmitText: { color: '#FFFFFF', fontSize: 14, fontFamily: fonts.bodyMedium },
   groupSubmitTextDisabled: { color: colors.ink3 },
   groupDirectToggle: { paddingLeft: 36, marginTop: 6 },
   groupDirectToggleText: {
@@ -634,6 +630,8 @@ const styles = StyleSheet.create({
   groupDirectInput: {
     flex: 1,
     backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.line,
     borderRadius: 100,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -647,19 +645,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  groupDirectAddText: { color: colors.bg, fontSize: 12, fontFamily: fonts.bodyMedium },
+  groupDirectAddText: { color: '#FFFFFF', fontSize: 12, fontFamily: fonts.bodyMedium },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
     padding: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
     backgroundColor: colors.bg,
   },
   input: {
     flex: 1,
     borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.line,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 120,
@@ -677,5 +675,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: colors.bg, fontSize: 18 },
+  sendText: { color: '#FFFFFF', fontSize: 18 },
 });

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
@@ -19,6 +20,7 @@ import { requestHistoryUpdate } from '@/lib/ai';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui, userTheme } from '@/constants/colors';
 
 export default function Mission() {
@@ -113,9 +115,12 @@ export default function Mission() {
   if (!missionReady || !outputs || !couple || !session) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <ProgressSteps current={4} />
+        <Wash />
+        <View style={styles.progressHeader}>
+          <ProgressSteps current={4} />
+        </View>
         <View style={styles.loadingBody}>
-          <Text style={styles.loadingMark}>❦</Text>
+          <LinearGradient colors={['#F8E3C4', '#F6D9D6']} style={styles.loadingOrb} />
           <Text style={styles.loadingText}>미션 페이퍼를 준비하고 있어요…</Text>
           <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
         </View>
@@ -134,7 +139,10 @@ export default function Mission() {
 
   return (
     <View style={styles.container}>
-      <ProgressSteps current={4} />
+      <Wash />
+      <View style={styles.progressHeader}>
+        <ProgressSteps current={4} />
+      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>우리의 미션 페이퍼</Text>
         <Text style={styles.hint}>
@@ -200,41 +208,36 @@ export default function Mission() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  progressHeader: { paddingHorizontal: 24 },
   loading: {},
-  loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  loadingMark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
-  loadingText: { ...ui.statementSub },
+  loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  loadingOrb: { width: 88, height: 88, borderRadius: 44, marginBottom: 28 },
+  loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
   scroll: { padding: 24, paddingBottom: 48 },
   title: {
     ...ui.statement,
-    fontSize: 21,
     marginTop: 12,
   },
   hint: {
     ...ui.statementSub,
-    fontSize: 13,
     marginTop: 6,
     marginBottom: 24,
   },
   mindsetCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingTop: 18,
+    ...ui.card,
     marginVertical: 8,
   },
   mindsetTitle: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    textAlign: 'center',
     marginBottom: 14,
   },
   mindsetItem: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2, marginBottom: 14 },
   mindsetName: {
     fontSize: 12,
     fontFamily: fonts.bodyMedium,
-    letterSpacing: 2,
     marginBottom: 4,
   },
   mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },

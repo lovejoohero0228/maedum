@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useConflictStore } from '@/store/conflictStore';
 import { supabase } from '@/lib/supabase';
 import { deleteConflict } from '@/services/conflictService';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
-import { colors, fonts, ui } from '@/constants/colors';
+import { Wash } from '@/components/ui/Wash';
+import { colors, fonts, gradients, ui } from '@/constants/colors';
 import type { Conflict, ConflictStatus } from '@/lib/types';
 
 // 상태 → 이어갈 화면 (AGENT.md §4 플로우)
@@ -123,6 +125,7 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
+      <Wash />
       <View style={styles.header}>
         <Text style={styles.logo}>맺음</Text>
         <View style={styles.headerRight}>
@@ -148,17 +151,16 @@ export default function Home() {
             return (
               <Pressable
                 key={c.id}
-                style={[styles.partnerChip, !isActive && styles.partnerChipInactive]}
+                style={[styles.partnerChip, isActive && styles.partnerChipActive]}
                 onPress={() => selectCouple(c.id)}
               >
-                <Avatar name={p?.display_name ?? '?'} color="coral" size={32} />
+                <Avatar name={p?.display_name ?? '?'} color="coral" size={24} />
                 <Text
                   style={[styles.partnerChipName, isActive && styles.partnerChipNameActive]}
                   numberOfLines={1}
                 >
                   {p?.display_name ?? '상대'}
                 </Text>
-                <View style={[styles.partnerChipMark, isActive && styles.partnerChipMarkActive]} />
               </Pressable>
             );
           })}
@@ -168,66 +170,90 @@ export default function Home() {
         </ScrollView>
       ) : null}
 
-      <View style={styles.centerArea}>
+      <View style={styles.headline}>
         {couple && partner ? (
-          <View style={styles.coupleBlock}>
+          <>
+            <Text style={ui.statement}>서운했던 마음,{'\n'}정리해서 전해볼까요?</Text>
             <View style={styles.coupleRow}>
-              <Avatar name={profile?.display_name ?? ''} color={myColor()} size={44} />
-              <Text style={styles.heart}>♥</Text>
+              <Avatar name={profile?.display_name ?? ''} color={myColor()} size={24} />
               <Avatar
                 name={partner.display_name}
                 color={myColor() === 'blue' ? 'coral' : 'blue'}
-                size={44}
+                size={24}
               />
+              <Text style={styles.coupleNames}>
+                {profile?.display_name} & {partner.display_name}
+              </Text>
             </View>
-            <Text style={styles.coupleNames}>
-              {profile?.display_name} & {partner.display_name}
-            </Text>
-          </View>
+          </>
         ) : (
-          <Pressable style={styles.coupleBlock} onPress={() => router.push('/(main)/pair')}>
-            <Text style={ui.statementSub}>아직 상대와 연결되지 않았어요.</Text>
-            <Text style={styles.quietLink}>연결하기</Text>
-          </Pressable>
+          <>
+            <Text style={ui.statement}>둘을 연결하는 것부터{'\n'}시작해볼까요?</Text>
+            <Text style={styles.headlineSub}>아직 상대와 연결되지 않았어요.</Text>
+          </>
         )}
+      </View>
 
-        {conflict && conflict.status !== 'resolved' ? (
-          <View style={styles.focal}>
-            <Pressable onPress={onResume} style={styles.focalPress}>
-              <Text style={ui.statementSub}>
+      {!couple ? (
+        <Pressable style={styles.whiteCard} onPress={() => router.push('/(main)/pair')}>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>상대와 연결하기</Text>
+            <Text style={styles.cardSub}>초대 코드로 두 사람을 이어요</Text>
+          </View>
+          <Text style={styles.cardArrow}>→</Text>
+        </Pressable>
+      ) : conflict && conflict.status !== 'resolved' ? (
+        <>
+          <Pressable onPress={onResume}>
+            <LinearGradient
+              colors={[...gradients.ember]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emberCard}
+            >
+              <Text style={styles.emberLabel}>
                 {partnerStarted
                   ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
                   : '진행 중인 맺음'}
               </Text>
-              <Text style={styles.focalStatement}>{STATUS_LABEL[conflict.status]}</Text>
-              <Text style={styles.quietLink}>이어가기</Text>
-            </Pressable>
-            <Pressable onPress={onDeleteConflict} disabled={deleting} hitSlop={8}>
-              <Text style={styles.resumeDelete}>
-                {deleting ? '삭제 중…' : '삭제하고 다시 시작'}
-              </Text>
-            </Pressable>
-          </View>
-        ) : needsRelationshipSetup ? (
-          <Pressable style={styles.focal} onPress={onSetupRelationship}>
-            <Text style={styles.startIcon}>✦</Text>
-            <Text style={styles.focalStatement}>관계 정보 입력하기</Text>
-            <Text style={ui.statementSub}>
-              두 사람 이야기를 먼저 알려주면{'\n'}더 정확한 질문을 받을 수 있어요
+              <View style={styles.emberRow}>
+                <Text style={styles.emberTitle}>{STATUS_LABEL[conflict.status]}</Text>
+                <Text style={styles.emberArrow}>→</Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+          <Pressable onPress={onDeleteConflict} disabled={deleting} hitSlop={8}>
+            <Text style={styles.resumeDelete}>
+              {deleting ? '삭제 중…' : '삭제하고 다시 시작'}
             </Text>
           </Pressable>
-        ) : (
-          <Pressable
-            style={[styles.focal, !couple && styles.startDisabled]}
-            onPress={onStart}
-            disabled={!couple}
+        </>
+      ) : needsRelationshipSetup ? (
+        <Pressable style={styles.whiteCard} onPress={onSetupRelationship}>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>관계 정보 입력하기</Text>
+            <Text style={styles.cardSub}>
+              두 사람 이야기를 먼저 알려주면 더 정확한 질문을 받을 수 있어요
+            </Text>
+          </View>
+          <Text style={styles.cardArrow}>→</Text>
+        </Pressable>
+      ) : (
+        <Pressable onPress={onStart}>
+          <LinearGradient
+            colors={[...gradients.ember]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emberCard}
           >
-            <Text style={styles.startIcon}>❦</Text>
-            <Text style={styles.focalStatement}>서운했던 마음,{'\n'}정리해서 전해볼까요?</Text>
-            <Text style={styles.startCta}>탭하여 맺음 시작</Text>
-          </Pressable>
-        )}
-      </View>
+            <Text style={styles.emberTitle}>맺음 시작</Text>
+            <Text style={styles.emberSub}>오늘, 하고 싶었던 이야기가 있나요?</Text>
+            <View style={styles.emberFauxInput}>
+              <Text style={styles.emberFauxInputText}>마음속 이야기를 들려주세요…</Text>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      )}
 
       <View style={styles.footerLinks}>
         <Pressable onPress={() => router.push('/(main)/history')}>
@@ -243,68 +269,107 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 64 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 24, paddingTop: 64 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   logo: { fontSize: 24, color: colors.ink, fontFamily: fonts.displayMedium },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  addPartnerLink: { fontSize: 13, color: colors.ink3, fontFamily: fonts.bodyMedium },
+  addPartnerLink: { fontSize: 13, color: colors.ink2, fontFamily: fonts.bodyMedium },
   partnerScroll: { flexGrow: 0 },
-  partnerScrollContent: { gap: 10, paddingRight: 4 },
+  partnerScrollContent: { gap: 8, paddingRight: 4, paddingVertical: 2 },
   partnerChip: {
+    ...ui.pill,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    gap: 4,
-    width: 68,
+    gap: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
   },
-  partnerChipInactive: { opacity: 0.45 },
-  partnerChipName: { fontSize: 11, color: colors.ink3, fontFamily: fonts.body },
+  partnerChipActive: {
+    ...ui.pillSelected,
+  },
+  partnerChipName: { fontSize: 13, color: colors.ink2, fontFamily: fonts.body, maxWidth: 96 },
   partnerChipNameActive: { color: colors.ink, fontFamily: fonts.bodyMedium },
-  partnerChipMark: { width: 24, height: 1.5, backgroundColor: 'transparent', marginTop: 2 },
-  partnerChipMarkActive: { backgroundColor: colors.ink },
   addPartnerChip: {
-    width: 68,
-    height: 68,
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.bgCard,
   },
-  addPartnerIcon: { fontSize: 22, color: colors.ink3 },
-  centerArea: { flex: 1, justifyContent: 'center' },
-  coupleBlock: { alignItems: 'center', marginBottom: 56, gap: 4 },
-  coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  heart: { fontSize: 14, color: colors.ink3 },
+  addPartnerIcon: { fontSize: 18, color: colors.ink3 },
+  headline: { marginTop: 36, marginBottom: 28 },
+  headlineSub: { ...ui.statementSub, marginTop: 10 },
+  coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   coupleNames: {
-    marginTop: 12,
-    fontSize: 14,
-    color: colors.ink2,
+    marginLeft: 4,
+    fontSize: 13,
+    color: colors.ink3,
     fontFamily: fonts.bodyMedium,
   },
-  quietLink: {
-    ...ui.quietCta,
-    marginTop: 14,
+  whiteCard: {
+    ...ui.card,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  focal: { alignItems: 'center', paddingHorizontal: 12 },
-  focalPress: { alignItems: 'center' },
-  focalStatement: {
-    ...ui.statement,
-    marginTop: 10,
+  cardBody: { flex: 1, marginRight: 12 },
+  cardTitle: {
+    fontSize: 19,
+    lineHeight: 28,
+    color: colors.ink,
+    fontFamily: fonts.displayMedium,
+  },
+  cardSub: { ...ui.statementSub, marginTop: 6 },
+  cardArrow: { fontSize: 20, color: colors.ink2 },
+  emberCard: {
+    borderRadius: 20,
+    padding: 22,
+  },
+  emberLabel: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: fonts.bodyMedium,
     marginBottom: 8,
   },
-  startDisabled: { opacity: 0.4 },
-  startIcon: { fontSize: 28, color: colors.ink2, marginBottom: 14 },
-  startCta: {
-    ...ui.quietCta,
-    marginTop: 18,
+  emberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  emberTitle: {
+    fontSize: 22,
+    lineHeight: 32,
+    color: '#FFFFFF',
+    fontFamily: fonts.displayMedium,
+  },
+  emberArrow: { fontSize: 20, color: '#FFFFFF' },
+  emberSub: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.9)',
+    fontFamily: fonts.body,
+    marginTop: 6,
+  },
+  emberFauxInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    marginTop: 16,
+  },
+  emberFauxInputText: { fontSize: 14, color: colors.ink3, fontFamily: fonts.body },
   resumeDelete: {
     fontSize: 12,
     color: colors.ink3,
-    marginTop: 20,
+    marginTop: 14,
+    textAlign: 'center',
     textDecorationLine: 'underline',
     fontFamily: fonts.body,
   },
@@ -312,7 +377,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginTop: 'auto',
+    marginBottom: 28,
   },
   footerLink: { fontSize: 13, color: colors.ink3, fontFamily: fonts.body },
   footerDot: { color: colors.ink3 },

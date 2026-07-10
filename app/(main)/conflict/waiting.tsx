@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { restartFromField } from '@/services/aiInputService';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts, ui } from '@/constants/colors';
+import { Wash } from '@/components/ui/Wash';
+import { colors, ui } from '@/constants/colors';
 import { FIELD_ORDER, type Conflict } from '@/lib/types';
 
 export default function Waiting() {
@@ -82,9 +84,15 @@ export default function Waiting() {
 
   return (
     <View style={styles.container}>
-      <ProgressSteps current={isProcessing ? 3 : 2} />
+      <Wash />
+      <View style={styles.progressWrap}>
+        <ProgressSteps current={isProcessing ? 3 : 2} />
+      </View>
       <View style={styles.body}>
-        <Text style={styles.mark}>{isProcessing ? '✒' : '❦'}</Text>
+        <LinearGradient
+          colors={isProcessing ? ['#F2A868', '#F6D9D6'] : ['#F6D9D6', '#F8E3C4']}
+          style={styles.orb}
+        />
         <Text style={styles.title}>
           {isProcessing
             ? 'AI가 두 사람의 편지를 쓰고 있어요'
@@ -99,7 +107,7 @@ export default function Waiting() {
         {!isProcessing ? (
           <Pressable onPress={onRestart} disabled={restarting} style={styles.restartButton}>
             <Text style={styles.restartText}>
-              {restarting ? '초기화 중…' : '↺ 내 응답 다시 작성하기'}
+              {restarting ? '초기화 중…' : '내 응답 다시 작성하기'}
             </Text>
           </Pressable>
         ) : null}
@@ -110,20 +118,28 @@ export default function Waiting() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
+  progressWrap: { paddingHorizontal: 24 },
   body: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  mark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
+  orb: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: 28,
+  },
   title: {
     ...ui.statement,
     fontSize: 20,
     lineHeight: 31,
+    textAlign: 'center',
   },
   desc: {
     ...ui.statementSub,
+    textAlign: 'center',
     marginTop: 14,
   },
   spinner: { marginTop: 30, opacity: 0.7 },

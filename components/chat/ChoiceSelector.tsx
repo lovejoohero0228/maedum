@@ -1,4 +1,4 @@
-// 선택지 버튼 그룹 (AGENT.md §7-1) — 밝은 알약형 선택지, 선택 시 먹색 채움
+// 선택지 버튼 그룹 (AGENT.md §7-1) — 헤어라인 보더 칩, 선택 시 웜 탄 채움 (EMBr 스타일)
 // 단일 선택(기본): 선택지는 2~4개, allowDirectInput이면 마지막에 "직접 입력할게요 →" 추가, 탭 즉시 onSelect fire.
 // 복수 선택(multiple=true): 체크박스처럼 토글만 하고, "선택 완료" 버튼을 눌러야 onSubmit이 fire된다.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -53,7 +53,7 @@ export function ChoiceSelector({
             disabled={!interactive}
             style={[
               styles.choice,
-              isSelected && { backgroundColor: colors.ink },
+              isSelected && styles.choiceSelected,
               !interactive && !isSelected && styles.choiceMuted,
             ]}
           >
@@ -90,31 +90,35 @@ export function ChoiceSelector({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8, marginVertical: 10, paddingLeft: 23, alignItems: 'flex-start' },
+  wrap: { gap: 8, marginVertical: 10, paddingLeft: 20, alignItems: 'flex-start' },
   choice: {
     backgroundColor: colors.bgCard,
     borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.line,
     paddingHorizontal: 18,
     paddingVertical: 11,
+  },
+  choiceSelected: {
+    backgroundColor: colors.chipSelected,
+    borderColor: colors.chipSelected,
   },
   choiceText: {
     fontSize: 14,
     color: colors.ink,
     fontFamily: fonts.body,
   },
-  choiceTextSelected: { color: colors.bg, fontFamily: fonts.bodyMedium },
+  choiceTextSelected: { color: colors.ink, fontFamily: fonts.bodyMedium },
   choiceMuted: { opacity: 0.45 },
   direct: { paddingVertical: 6, paddingHorizontal: 4 },
   directText: {
-    fontSize: 13,
-    letterSpacing: 2,
+    fontSize: 14,
     color: colors.ink3,
     fontFamily: fonts.bodyMedium,
   },
   submit: { paddingVertical: 8, paddingHorizontal: 4 },
   submitText: {
-    fontSize: 13,
-    letterSpacing: 2,
+    fontSize: 14,
     fontFamily: fonts.bodyMedium,
   },
 });

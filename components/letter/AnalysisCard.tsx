@@ -1,9 +1,9 @@
-// 중재자 분석 — 박스 대신 헤어라인 디바이더로 나뉘는 섹션, 세리프 제목
+// 중재자 분석 — 화이트 소프트 카드 섹션, 좌측 정렬 세리프 제목 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 interface AnalysisCardProps {
-  icon: string;    // 모노크롬 글리프 — 예: "◷" "△" "✦"
+  icon: string;    // 작은 뮤트 글리프 — 예: "◷" "△" "✦"
   title: string;   // 섹션 제목
   children: React.ReactNode;
 }
@@ -26,11 +26,8 @@ export function AnalysisText({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   section: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    paddingTop: 18,
-    paddingBottom: 10,
-    marginVertical: 2,
+    ...ui.card,
+    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
@@ -38,9 +35,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 8,
   },
-  icon: { fontSize: 13, color: colors.ink2 },
+  icon: { fontSize: 13, color: colors.ink3 },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
   },

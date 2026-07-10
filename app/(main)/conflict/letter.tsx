@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
@@ -22,6 +23,7 @@ import { LetterCard } from '@/components/letter/LetterCard';
 import { IntensityBar } from '@/components/letter/IntensityBar';
 import { AnalysisCard, AnalysisText } from '@/components/letter/AnalysisCard';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Letter() {
@@ -125,7 +127,8 @@ export default function Letter() {
   if (!outputs || !couple || !session) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <Text style={styles.loadingMark}>❦</Text>
+        <Wash variant="pink" />
+        <LinearGradient colors={['#F6D9D6', '#F8E3C4']} style={styles.loadingOrb} />
         <Text style={styles.loadingText}>편지를 불러오는 중…</Text>
         <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
       </View>
@@ -140,7 +143,10 @@ export default function Letter() {
 
   return (
     <View style={styles.container}>
-      <ProgressSteps current={3} />
+      <Wash variant="pink" />
+      <View style={styles.progressHeader}>
+        <ProgressSteps current={3} />
+      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.letterTabs}>
           <Pressable
@@ -260,9 +266,10 @@ export default function Letter() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  progressHeader: { paddingHorizontal: 24 },
   loading: { alignItems: 'center', justifyContent: 'center' },
-  loadingMark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
-  loadingText: { ...ui.statementSub },
+  loadingOrb: { width: 88, height: 88, borderRadius: 44, marginBottom: 28 },
+  loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
   letterTabs: {
     flexDirection: 'row',
@@ -280,31 +287,26 @@ const styles = StyleSheet.create({
   letterTabTextActive: { color: colors.ink },
   scroll: { padding: 24, paddingBottom: 48 },
   sectionTitle: {
-    fontSize: 19,
-    color: colors.ink,
-    fontFamily: fonts.displayMedium,
-    textAlign: 'center',
+    ...ui.statement,
+    fontSize: 21,
+    lineHeight: 31,
     marginTop: 28,
     marginBottom: 6,
   },
   sectionHint: {
     ...ui.statementSub,
-    fontSize: 12,
-    lineHeight: 19,
-    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 14,
   },
   scalesCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingTop: 18,
-    paddingBottom: 6,
+    ...ui.card,
     marginTop: 20,
   },
   scalesTitle: {
     fontSize: 13,
     color: colors.ink2,
     fontFamily: fonts.bodyMedium,
-    textAlign: 'center',
     marginBottom: 10,
   },
   readyButton: {

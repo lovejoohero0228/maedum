@@ -1,37 +1,50 @@
-// 색상 & 디자인 토큰 — Find Your Faith 레퍼런스 기반 파치먼트/잉크 디자인 언어
-// 따뜻한 양피지 배경 + 먹색 세리프 타이포 + 낮은 채도의 포인트 컬러
+// 색상 & 디자인 토큰 — EMBr(AI Period Tracker, Dribbble 27451793) 레퍼런스 기반
+// 웜 크림 바탕 + 피치 그라데이션 워시 + 다크 브라운 세리프 + 화이트 소프트 카드 + 블랙 필 CTA
 export const colors = {
-  bg:          '#E7DFC8', // 양피지
-  bgCard:      '#F1EAD7', // 배경보다 아주 살짝 밝은 면 (카드 최소화, 필요할 때만)
-  ink:         '#211D14', // 먹색 (웜 블랙)
-  ink2:        '#5C5546',
-  ink3:        '#8E8571', // 보조 텍스트 / 조용한 CTA
-  line:        '#D3C9AC',
-  line2:       '#DDD4B9',
+  bg:          '#F6F1E8', // 웜 크림
+  bgCard:      '#FFFFFF', // 소프트 카드
+  ink:         '#2B1712', // 다크 웜 브라운 (헤드라인/블랙 필)
+  ink2:        '#5F5148',
+  ink3:        '#9A8D82', // 보조 텍스트
+  line:        '#E8E0D2', // 헤어라인/칩 보더
+  line2:       '#F0EADD',
 
-  // 사용자 A — blue (잉크 블루, 저채도)
-  blueTint:    '#DCE1DC',
-  blueMid:     '#44607A',
-  blueText:    '#31485E',
+  // 사용자 A — blue (뮤트 블루)
+  blueTint:    '#E7EEF5',
+  blueMid:     '#5B84AE',
+  blueText:    '#3E6183',
 
-  // 사용자 B — coral (테라코타, 저채도)
-  coralTint:   '#E8DCC6',
-  coralMid:    '#A55C39',
-  coralText:   '#7E4527',
+  // 사용자 B — coral (엠버 테라코타)
+  coralTint:   '#FAE8DE',
+  coralMid:    '#D06942',
+  coralText:   '#A34A28',
 
-  // AI — 세피아 (기존 purple 토큰 이름 유지)
-  purpleTint:  '#E0D8C0',
-  purpleMid:   '#7A6C4F',
-  purpleText:  '#564A31',
+  // AI — 엠버 오렌지 (기존 purple 토큰 이름 유지)
+  purpleTint:  '#FBEDDF',
+  purpleMid:   '#E08A54',
+  purpleText:  '#9C5527',
 
-  // 성공/완료 — 세이지 (기존 teal 토큰 이름 유지)
-  tealTint:    '#DFE0CA',
-  tealMid:     '#5F7355',
-  tealText:    '#46573E',
+  // 성공/완료 — 올리브 탄 (기존 teal 토큰 이름 유지)
+  tealTint:    '#EDE7D4',
+  tealMid:     '#8A7F53',
+  tealText:    '#6B6140',
 
   // 경고/재질문 — amber
-  amberTint:   '#EDE2C0',
-  amberText:   '#654A17',
+  amberTint:   '#F7ECD7',
+  amberText:   '#7A5A24',
+
+  // 선택된 칩 — 웜 탄 (EMBr의 selected chip fill)
+  chipSelected: '#E9DDC0',
+} as const;
+
+// 그라데이션 스톱 (expo-linear-gradient) — 화면 상단 워시와 AI 액센트 카드
+export const gradients = {
+  // 화면 상단의 은은한 피치 워시 → 크림으로 사라짐
+  wash:   ['#F8E3C4', '#F6F1E8'] as const,
+  // 핑크 워시 (편지/감정 화면)
+  pink:   ['#F6D9D6', '#F6F1E8'] as const,
+  // AI 액센트 카드 (Chat with EMBr 오렌지)
+  ember:  ['#F2A868', '#E0703E'] as const,
 } as const;
 
 export type UserColor = 'blue' | 'coral';
@@ -52,64 +65,76 @@ export const fonts = {
   bodyMedium: 'NotoSansKR_500Medium',
 } as const;
 
-// 공용 타이포/컴포넌트 스타일 — Find Your Faith 디자인 언어
-// 화면들이 일관되게 쓰는 반복 패턴을 토큰화한다.
+// 공용 스타일 — EMBr 디자인 언어
 export const ui = {
-  // 화면 중앙의 세리프 헤드라인 (질문/선언문)
+  // 좌측 정렬 대형 세리프 헤드라인 ("Tell us about your…" 스타일)
   statement: {
     fontFamily: fonts.displayMedium,
-    fontSize: 22,
-    lineHeight: 34,
+    fontSize: 25,
+    lineHeight: 36,
     color: colors.ink,
-    textAlign: 'center' as const,
+    textAlign: 'left' as const,
   },
-  // 헤드라인 아래 보조 설명
+  // 헤드라인 아래 보조 설명 (좌측 정렬, 회갈색)
   statementSub: {
     fontFamily: fonts.body,
     fontSize: 14,
     lineHeight: 22,
     color: colors.ink3,
-    textAlign: 'center' as const,
+    textAlign: 'left' as const,
   },
-  // 하단의 조용한 레터스페이스 CTA ("탭하여 계속" 스타일)
+  // 작은 보조 링크/캡션 (Skip 등)
   quietCta: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    letterSpacing: 3,
-    color: colors.ink3,
+    fontSize: 14,
+    color: colors.ink2,
     textAlign: 'center' as const,
   },
-  // 밝은 알약형 보조 버튼 (레퍼런스의 Skip/Go back 필)
+  // 흰색 소프트 카드
+  card: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 20,
+    padding: 20,
+  },
+  // 헤어라인 보더 칩 (미선택)
   pill: {
     backgroundColor: colors.bgCard,
     borderRadius: 100,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
   },
   pillText: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.body,
     fontSize: 14,
     color: colors.ink,
     textAlign: 'center' as const,
   },
-  // 주요 액션 — 먹색 알약
+  // 선택된 칩 — 웜 탄 채움, 보더 없음
+  pillSelected: {
+    backgroundColor: colors.chipSelected,
+    borderColor: colors.chipSelected,
+  },
+  // 주요 액션 — 풀폭 블랙 필 ("Continue")
   primaryPill: {
     backgroundColor: colors.ink,
     borderRadius: 100,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 28,
+    alignSelf: 'stretch' as const,
   },
   primaryPillText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
-    color: colors.bg,
+    fontSize: 16,
+    color: '#FFFFFF',
     textAlign: 'center' as const,
   },
-  // 상단의 얇은 진행 바 트랙/채움
+  // 상단의 얇은 진행 바 (반투명 화이트 트랙 + 잉크 채움)
   progressTrack: {
-    height: 5,
+    height: 4,
     borderRadius: 100,
-    backgroundColor: colors.line2,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     overflow: 'hidden' as const,
   },
   progressFill: {

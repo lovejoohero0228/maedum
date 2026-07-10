@@ -13,6 +13,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { acceptInviteCode, createInviteCode } from '@/services/conflictService';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Pair() {
@@ -99,73 +100,77 @@ export default function Pair() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>둘을 연결할 차례예요</Text>
-      <Text style={styles.subtitle}>
-        한 명이 초대 코드를 만들고,{'\n'}상대가 그 코드를 입력하면 연결돼요.
-      </Text>
+    <View style={styles.container}>
+      <Wash />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={ui.statement}>둘을 연결할 차례예요</Text>
+        <Text style={styles.subtitle}>
+          한 명이 초대 코드를 만들고,{'\n'}상대가 그 코드를 입력하면 연결돼요.
+        </Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>초대 코드 만들기</Text>
-        {myCode ? (
-          <>
-            <Text style={styles.code}>{myCode}</Text>
-            <Text style={styles.hint}>
-              이 코드를 상대에게 알려주세요.{'\n'}상대가 입력하면 자동으로 연결돼요.
-            </Text>
-          </>
-        ) : (
-          <Pressable style={styles.pillButton} onPress={onCreate} disabled={busy}>
-            <Text style={ui.pillText}>코드 생성</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>초대 코드 만들기</Text>
+          {myCode ? (
+            <>
+              <Text style={styles.code}>{myCode}</Text>
+              <Text style={styles.hint}>
+                이 코드를 상대에게 알려주세요.{'\n'}상대가 입력하면 자동으로 연결돼요.
+              </Text>
+            </>
+          ) : (
+            <Pressable style={styles.pillButton} onPress={onCreate} disabled={busy}>
+              <Text style={ui.pillText}>코드 생성</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>받은 코드 입력하기</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="A1B2C3"
+            placeholderTextColor={colors.ink3}
+            autoCapitalize="characters"
+            value={inputCode}
+            onChangeText={setInputCode}
+          />
+          <Pressable style={styles.primaryButton} onPress={onAccept} disabled={busy}>
+            <Text style={ui.primaryPillText}>{busy ? '연결 중…' : '연결하기'}</Text>
           </Pressable>
-        )}
-      </View>
+        </View>
 
-      <View style={styles.divider} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>받은 코드 입력하기</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="A1B2C3"
-          placeholderTextColor={colors.ink3}
-          autoCapitalize="characters"
-          value={inputCode}
-          onChangeText={setInputCode}
-        />
-        <Pressable style={styles.primaryButton} onPress={onAccept} disabled={busy}>
-          <Text style={ui.primaryPillText}>{busy ? '연결 중…' : '연결하기'}</Text>
+        <Pressable onPress={onLogout}>
+          <Text style={styles.logout}>로그아웃</Text>
         </Pressable>
-      </View>
-
-      <Pressable onPress={onLogout}>
-        <Text style={styles.logout}>로그아웃</Text>
-      </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: 24, paddingTop: 120, paddingBottom: 48, alignItems: 'center' },
-  title: { ...ui.statement },
+  content: { paddingHorizontal: 24, paddingTop: 100, paddingBottom: 48 },
   subtitle: {
     ...ui.statementSub,
-    marginTop: 12,
-    marginBottom: 56,
+    marginTop: 10,
+    marginBottom: 32,
   },
-  section: { alignItems: 'center', alignSelf: 'stretch' },
-  sectionLabel: {
-    ...ui.quietCta,
-    marginBottom: 20,
+  card: {
+    ...ui.card,
+    marginBottom: 16,
+  },
+  cardLabel: {
+    fontSize: 13,
+    color: colors.ink3,
+    fontFamily: fonts.bodyMedium,
+    marginBottom: 14,
   },
   code: {
-    fontSize: 34,
+    fontSize: 32,
     letterSpacing: 8,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   hint: {
     ...ui.statementSub,
@@ -174,33 +179,28 @@ const styles = StyleSheet.create({
   },
   pillButton: {
     ...ui.pill,
-    minWidth: 160,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.line,
-    alignSelf: 'center',
-    width: 48,
-    marginVertical: 44,
+    alignSelf: 'flex-start',
   },
   input: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-    paddingVertical: 10,
-    fontSize: 22,
-    letterSpacing: 6,
+    backgroundColor: colors.bg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    fontSize: 18,
+    letterSpacing: 4,
     color: colors.ink,
-    textAlign: 'center',
-    minWidth: 200,
-    marginBottom: 24,
-    fontFamily: fonts.display,
+    marginBottom: 14,
+    fontFamily: fonts.body,
   },
   primaryButton: {
     ...ui.primaryPill,
-    minWidth: 200,
+    alignItems: 'center',
   },
   logout: {
     ...ui.quietCta,
-    marginTop: 64,
+    marginTop: 32,
+    alignSelf: 'center',
   },
 });

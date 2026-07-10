@@ -6,7 +6,7 @@ import type { FlagType } from '@/lib/types';
 const FLAG_STYLE: Record<FlagType, { icon: string; fg: string; defaultText: string }> = {
   warn: { icon: '⚠', fg: colors.amberText, defaultText: '좀 더 확인이 필요해요' },
   ok: { icon: '✓', fg: colors.tealText, defaultText: '좋아요, 이해됐어요' },
-  purple: { icon: '✦', fg: colors.purpleText, defaultText: '한 가지만 더' },
+  purple: { icon: '•', fg: colors.purpleText, defaultText: '한 가지만 더' },
 };
 
 interface FlagBadgeProps {
@@ -32,7 +32,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    letterSpacing: 0.5,
     fontFamily: fonts.bodyMedium,
   },
 });

@@ -1,6 +1,6 @@
-// 대화 시작 방법 3단계 가이드 + 하단 주의사항 (AGENT.md §4-4) — 플랫, 세리프 제목, 헤어라인
+// 대화 시작 방법 3단계 가이드 + 하단 주의사항 (AGENT.md §4-4) — 화이트 카드, 엠버 단계 번호 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
+import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { ConvoStep } from '@/lib/types';
 
 interface ConvoGuideProps {
@@ -52,13 +52,11 @@ export function ConvoGuide({ steps, note, nameA, nameB, colorA, colorB }: ConvoG
 
 const styles = StyleSheet.create({
   section: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    paddingTop: 20,
+    ...ui.card,
     marginVertical: 10,
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
     marginBottom: 18,
@@ -66,18 +64,18 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', gap: 14, marginBottom: 18 },
   stepNum: {
     fontSize: 16,
-    color: colors.purpleText,
+    color: colors.purpleMid,
     fontFamily: fonts.displayMedium,
     width: 16,
     textAlign: 'center',
     marginTop: 1,
   },
   stepBody: { flex: 1 },
-  stepWho: { fontSize: 12, letterSpacing: 0.5, fontFamily: fonts.bodyMedium, marginBottom: 3 },
+  stepWho: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 3 },
   stepText: { fontSize: 14, lineHeight: 22, color: colors.ink2, fontFamily: fonts.body },
   listenerBox: {
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.line,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.line2,
     paddingLeft: 10,
     marginTop: 8,
   },

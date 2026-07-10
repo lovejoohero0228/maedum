@@ -9,6 +9,7 @@ import { upsertRelationshipProfile } from '@/services/relationshipProfileService
 import { requestReferenceBank } from '@/lib/ai';
 import { showAlert } from '@/lib/alert';
 import { ChoiceSelector, DIRECT_INPUT } from '@/components/chat/ChoiceSelector';
+import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 import {
   RELATIONSHIP_TYPES,
@@ -96,6 +97,7 @@ export default function RelationshipProfileScreen() {
   if (saving) {
     return (
       <View style={styles.loadingContainer}>
+        <Wash />
         <ActivityIndicator size="small" color={colors.ink2} />
         <Text style={styles.loadingText}>AI가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
       </View>
@@ -104,19 +106,19 @@ export default function RelationshipProfileScreen() {
 
   return (
     <View style={styles.container}>
+      <Wash />
       <View style={styles.header}>
         {step > 1 ? (
-          <Pressable onPress={() => setStep(step - 1)}>
+          <Pressable onPress={() => setStep(step - 1)} hitSlop={8}>
             <Text style={styles.back}>←</Text>
           </Pressable>
         ) : (
           <View style={{ width: 24 }} />
         )}
-        <Text style={styles.title}>관계 정보</Text>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+        </View>
         <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -251,15 +253,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 16,
     paddingHorizontal: 24,
   },
   back: { fontSize: 22, color: colors.ink2 },
-  title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
   progressTrack: {
     ...ui.progressTrack,
-    marginTop: 16,
-    marginHorizontal: 24,
+    flex: 1,
   },
   progressFill: ui.progressFill,
   content: { padding: 24, paddingTop: 36, paddingBottom: 40 },
@@ -276,19 +276,19 @@ const styles = StyleSheet.create({
   durationInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 10,
     marginTop: 12,
   },
   durationInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    width: 80,
+    backgroundColor: colors.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    width: 96,
     fontSize: 15,
     color: colors.ink,
-    textAlign: 'center',
     fontFamily: fonts.body,
   },
   durationSuffix: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },

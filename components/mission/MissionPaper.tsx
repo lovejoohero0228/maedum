@@ -1,17 +1,7 @@
-// 미션 페이퍼 (AGENT.md §7-4) — 틴트 박스 대신 사용자 색 상단 룰이 있는 두 컬럼
+// 미션 페이퍼 (AGENT.md §7-4) — 화이트 소프트 카드 두 컬럼, 사용자 색 도트 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
+import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { MissionItem } from '@/lib/types';
-
-// 컬러 이모지 대신 잉크 톤 모노크롬 글리프 (Find Your Faith 그래머)
-const missionGlyph: Record<MissionItem['type'], string> = {
-  prevent: '✧',
-  differently: '❖',
-  empathy: '☙',
-  habit: '◦',
-  acknowledge: '✦',
-  action: '➔',
-};
 
 interface MissionColumnProps {
   name: string;
@@ -22,11 +12,11 @@ interface MissionColumnProps {
 function MissionColumn({ name, color, missions }: MissionColumnProps) {
   const theme = userTheme(color);
   return (
-    <View style={[styles.column, { borderTopColor: theme.mid }]}>
+    <View style={styles.column}>
       <Text style={[styles.columnTitle, { color: theme.text }]}>{name}의 미션</Text>
       {missions.map((m, i) => (
         <View key={i} style={styles.item}>
-          <Text style={styles.itemIcon}>{missionGlyph[m.type] ?? '✦'}</Text>
+          <View style={[styles.itemDot, { backgroundColor: theme.mid }]} />
           <Text style={styles.itemText}>{m.text}</Text>
         </View>
       ))}
@@ -60,25 +50,29 @@ export function MissionPaper({
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', gap: 20, marginVertical: 10 },
+  grid: { flexDirection: 'row', gap: 12, marginVertical: 10 },
   column: {
+    ...ui.card,
     flex: 1,
-    borderTopWidth: 2,
-    paddingTop: 12,
+    padding: 16,
   },
   columnTitle: {
-    fontSize: 13,
-    letterSpacing: 1,
+    fontSize: 14,
     fontFamily: fonts.bodyMedium,
     marginBottom: 12,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 7,
+    gap: 8,
     marginBottom: 12,
   },
-  itemIcon: { fontSize: 13, marginTop: 2, color: colors.ink2 },
+  itemDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 7,
+  },
   itemText: {
     flex: 1,
     fontSize: 13,

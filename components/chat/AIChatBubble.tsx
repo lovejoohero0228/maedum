@@ -1,4 +1,4 @@
-// AI 메시지 — 배경 없는 잉크 세리프 텍스트, 세피아 ✦ 마커 (Find Your Faith 스타일)
+// AI 메시지 — 차분한 다크 텍스트 + 작은 엠버 도트 액센트 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '@/constants/colors';
 import { FlagBadge } from './FlagBadge';
@@ -13,7 +13,7 @@ interface AIChatBubbleProps {
 export function AIChatBubble({ message, flag, flagText }: AIChatBubbleProps) {
   return (
     <View style={styles.row}>
-      <Text style={styles.marker}>✦</Text>
+      <View style={styles.marker} />
       <View style={styles.bubbleWrap}>
         {flag ? <FlagBadge flag={flag} text={flagText} /> : null}
         <Text style={styles.text}>{message}</Text>
@@ -30,16 +30,18 @@ const styles = StyleSheet.create({
     paddingRight: 40,
   },
   marker: {
-    color: colors.purpleMid,
-    fontSize: 13,
-    marginRight: 10,
-    marginTop: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.purpleMid,
+    marginRight: 12,
+    marginTop: 9,
   },
   bubbleWrap: { flex: 1 },
   text: {
     color: colors.ink,
-    fontSize: 16,
-    lineHeight: 27,
-    fontFamily: fonts.display,
+    fontSize: 15,
+    lineHeight: 26,
+    fontFamily: fonts.body,
   },
 });

@@ -1,4 +1,4 @@
-// 이름 이니셜 아바타 — 사용자 색 틴트 배경 + 잉크 톤 이니셜, 헤어라인 링
+// 이름 이니셜 아바타 — 사용자 색 틴트의 소프트 원 + 뮤트 컬러 이니셜 (EMBr 스타일, 링 없음)
 import { StyleSheet, Text, View } from 'react-native';
 import { fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -19,7 +19,6 @@ export function Avatar({ name, color, size = 36 }: AvatarProps) {
           height: size,
           borderRadius: size / 2,
           backgroundColor: theme.tint,
-          borderColor: theme.mid,
         },
       ]}
     >
@@ -34,7 +33,6 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
   },
-  initial: { fontFamily: fonts.displayMedium },
+  initial: { fontFamily: fonts.bodyMedium },
 });

@@ -1,5 +1,5 @@
 // 플로우 진행 표시 (01 시작 → 02 입력 → 03 편지 → 04 미션)
-// 레퍼런스의 상단 얇은 진행 바 + 현재 단계의 조용한 레터스페이스 라벨
+// 상단 얇은 진행 바 + 현재 단계의 작은 라벨 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, ui } from '@/constants/colors';
 
@@ -28,10 +28,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 11,
-    letterSpacing: 3,
+    fontSize: 12,
     color: colors.ink3,
     textAlign: 'center',
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.body,
   },
 });

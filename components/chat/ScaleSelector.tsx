@@ -43,24 +43,29 @@ export function ScaleSelector({ choices, selectedValue, onSelect, color }: Scale
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginVertical: 10, paddingLeft: 23, gap: 8 },
+  wrap: { marginVertical: 10, paddingLeft: 20, gap: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   cell: {
     minWidth: 36,
     height: 36,
     borderRadius: 100,
     backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
-  cellSelected: { backgroundColor: colors.ink },
+  cellSelected: {
+    backgroundColor: colors.chipSelected,
+    borderColor: colors.chipSelected,
+  },
   cellText: {
     fontSize: 14,
     color: colors.ink,
     fontFamily: fonts.bodyMedium,
   },
-  cellTextSelected: { color: colors.bg },
+  cellTextSelected: { color: colors.ink },
   desc: {
     fontSize: 13,
     color: colors.ink3,

@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
           아래 내용을 캡처하거나 복사해서 알려주시면 원인을 바로 확인할 수 있어요.
         </Text>
         <Pressable style={styles.retry} onPress={() => this.setState({ error: null })}>
-          <Text style={ui.pillText}>다시 시도</Text>
+          <Text style={ui.primaryPillText}>다시 시도</Text>
         </Pressable>
         <View style={styles.rule} />
         <Text style={styles.message}>{error.message}</Text>
@@ -46,14 +46,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 28, paddingTop: 120 },
+  content: { padding: 24, paddingTop: 120 },
   sub: { ...ui.statementSub, marginTop: 12 },
-  retry: { ...ui.pill, alignSelf: 'center', marginTop: 24 },
+  retry: { ...ui.primaryPill, marginTop: 28 },
   rule: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.line,
-    width: 48,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     marginVertical: 28,
   },
   message: { fontSize: 14, color: colors.ink, fontFamily: fonts.bodyMedium, marginBottom: 14 },

@@ -1,6 +1,6 @@
-// 편지 — 종이 위의 편지처럼: 세리프 본문, 헤어라인 룰, 발신자 색은 작은 라벨로만
+// 편지 — 워시 위에 놓이는 화이트 소프트 카드, 세리프 본문 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
+import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 
 interface LetterCardProps {
   title: string;       // 예: "민준이의 속마음"
@@ -13,7 +13,6 @@ export function LetterCard({ title, body, senderColor }: LetterCardProps) {
   return (
     <View style={styles.sheet}>
       <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-      <View style={styles.rule} />
       <Text style={styles.body}>{body}</Text>
     </View>
   );
@@ -21,25 +20,15 @@ export function LetterCard({ title, body, senderColor }: LetterCardProps) {
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 4,
-    paddingVertical: 28,
+    ...ui.card,
+    paddingVertical: 26,
     paddingHorizontal: 24,
     marginVertical: 10,
   },
   title: {
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 13,
     fontFamily: fonts.bodyMedium,
-    textAlign: 'center',
-  },
-  rule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.line,
-    marginTop: 14,
-    marginBottom: 20,
-    alignSelf: 'center',
-    width: 48,
+    marginBottom: 14,
   },
   body: {
     fontSize: 16,
