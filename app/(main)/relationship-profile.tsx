@@ -12,6 +12,7 @@ import { upsertRelationshipProfile } from '@/services/relationshipProfileService
 import { requestReferenceBank } from '@/lib/ai';
 import { showAlert } from '@/lib/alert';
 import { ChoiceSelector, DIRECT_INPUT } from '@/components/chat/ChoiceSelector';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 import {
@@ -157,8 +158,9 @@ export default function RelationshipProfileScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Wash />
-        <ActivityIndicator size="small" color={colors.ink2} />
+        <Maedeubi size={88} breathe />
         <Text style={styles.loadingText}>매듭이가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
+        <ActivityIndicator size="small" color={colors.ink2} style={{ marginTop: 20 }} />
       </View>
     );
   }

@@ -18,6 +18,7 @@ import { LetterCard } from '@/components/letter/LetterCard';
 import { AnalysisCard, AnalysisText } from '@/components/letter/AnalysisCard';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { ConflictOutputs } from '@/lib/types';
@@ -173,7 +174,12 @@ export default function Record() {
 
         {tab === 'analysis' ? (
           <>
-            <Text style={styles.sectionTitle}>매듭이가 정리한 우리 이야기</Text>
+            <View style={styles.mediatorTitleRow}>
+              <Maedeubi size={22} />
+              <Text style={[styles.sectionTitle, styles.mediatorTitle]}>
+                매듭이가 정리한 우리 이야기
+              </Text>
+            </View>
 
             {analysis.timing?.person_a && analysis.timing?.person_b ? (
               <AnalysisCard icon="◷" title="마음이 상한 시점이 달라요">
@@ -330,6 +336,14 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 10,
   },
+  mediatorTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  mediatorTitle: { marginTop: 0, marginBottom: 0 },
   mindsetCard: {
     ...ui.card,
   },

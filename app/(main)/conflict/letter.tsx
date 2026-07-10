@@ -22,6 +22,7 @@ import { getMyInput } from '@/services/aiInputService';
 import { LetterCard } from '@/components/letter/LetterCard';
 import { IntensityBar } from '@/components/letter/IntensityBar';
 import { AnalysisCard, AnalysisText } from '@/components/letter/AnalysisCard';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
@@ -212,7 +213,12 @@ export default function Letter() {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>매듭이가 정리한 우리 이야기</Text>
+        <View style={styles.mediatorTitleRow}>
+          <Maedeubi size={24} />
+          <Text style={[styles.sectionTitle, styles.mediatorTitle]}>
+            매듭이가 정리한 우리 이야기
+          </Text>
+        </View>
 
         {/* 내부 필드까지 확인하고 렌더 — AI 응답의 스키마 드리프트로 person_a 등이 빠져 있으면
             undefined 접근으로 화면 전체가 죽어(흰 화면) 버리므로 카드 단위로 건너뛴다 */}
@@ -293,6 +299,14 @@ const styles = StyleSheet.create({
     marginTop: 28,
     marginBottom: 6,
   },
+  mediatorTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 28,
+    marginBottom: 6,
+  },
+  mediatorTitle: { marginTop: 0, marginBottom: 0 },
   sectionHint: {
     ...ui.statementSub,
     fontSize: 13,

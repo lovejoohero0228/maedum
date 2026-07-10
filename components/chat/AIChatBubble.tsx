@@ -1,7 +1,7 @@
-// 매듭이(중재 캐릭터) 메시지 — 차분한 다크 텍스트 + 작은 엠버 도트 액센트 (EMBr 스타일)
-// 도트는 매듭이 캐릭터 이미지가 준비되면 교체될 자리
+// 매듭이(중재 캐릭터) 메시지 — 차분한 다크 텍스트 + 매듭이 얼굴 마커 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '@/constants/colors';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { FlagBadge } from './FlagBadge';
 import type { FlagType } from '@/lib/types';
 
@@ -16,7 +16,8 @@ interface AIChatBubbleProps {
 export function AIChatBubble({ message, flag, flagText, showName = true }: AIChatBubbleProps) {
   return (
     <View style={styles.row}>
-      <View style={styles.marker} />
+      {/* 연속 말풍선에서는 첫 번째에만 얼굴을 보여주고 자리는 유지한다 */}
+      <View style={styles.marker}>{showName ? <Maedeubi size={28} /> : null}</View>
       <View style={styles.bubbleWrap}>
         {showName ? <Text style={styles.name}>매듭이</Text> : null}
         {flag ? <FlagBadge flag={flag} text={flagText} /> : null}
@@ -34,12 +35,9 @@ const styles = StyleSheet.create({
     paddingRight: 40,
   },
   marker: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.purpleMid,
-    marginRight: 12,
-    marginTop: 9,
+    width: 28,
+    marginRight: 10,
+    marginTop: 2,
   },
   bubbleWrap: { flex: 1 },
   name: {

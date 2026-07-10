@@ -2,7 +2,6 @@
 // 채팅 형식 — AI 질문 → 답변(선택지/자유입력) → 재질문 or 다음 항목
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +16,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { answerField, getMyInput, restartFromField, startField } from '@/services/aiInputService';
 import { Wash } from '@/components/ui/Wash';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
 import { ChoiceSelector } from '@/components/chat/ChoiceSelector';
@@ -446,7 +446,7 @@ export default function Input() {
 
         {waiting ? (
           <View style={styles.typing}>
-            <ActivityIndicator size="small" color={colors.ink3} />
+            <Maedeubi size={22} breathe />
             <Text style={styles.typingText}>매듭이가 생각하는 중…</Text>
           </View>
         ) : null}

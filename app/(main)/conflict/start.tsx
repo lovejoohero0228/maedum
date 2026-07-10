@@ -7,6 +7,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { startConflict, joinConflict } from '@/services/conflictService';
 import { sendPushTo } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
@@ -66,6 +67,9 @@ export default function Start() {
       </View>
 
       <View style={styles.body}>
+        <View style={styles.charWrap}>
+          <Maedeubi size={72} />
+        </View>
         <Text style={styles.title}>
           {partnerInitiated
             ? `${partner?.display_name ?? '상대'}가\n기다리고 있어요`
@@ -102,7 +106,8 @@ const styles = StyleSheet.create({
   back: { fontSize: 20, color: colors.ink },
   progressWrap: { flex: 1 },
   skip: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },
-  body: { flex: 1, paddingTop: 36 },
+  body: { flex: 1, paddingTop: 24 },
+  charWrap: { marginBottom: 18 },
   title: {
     ...ui.statement,
     fontSize: 28,

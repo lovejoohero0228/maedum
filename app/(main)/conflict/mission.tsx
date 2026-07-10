@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
 import { generateMission } from '@/services/missionService';
 import { requestHistoryUpdate } from '@/lib/ai';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
@@ -124,7 +124,9 @@ export default function Mission() {
           <ProgressSteps current={4} />
         </View>
         <View style={styles.loadingBody}>
-          <LinearGradient colors={['#F8E3C4', '#F6D9D6']} style={styles.loadingOrb} />
+          <View style={styles.loadingOrb}>
+            <Maedeubi size={104} breathe />
+          </View>
           <Text style={styles.loadingText}>매듭이가 미션 페이퍼를 준비하고 있어요…</Text>
           <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
         </View>
@@ -218,7 +220,7 @@ const styles = StyleSheet.create({
   progressHeader: { paddingHorizontal: 24 },
   loading: {},
   loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  loadingOrb: { width: 88, height: 88, borderRadius: 44, marginBottom: 28 },
+  loadingOrb: { marginBottom: 28 },
   loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
   scroll: { padding: 24, paddingBottom: 48 },

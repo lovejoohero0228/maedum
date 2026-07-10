@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { restartFromField } from '@/services/aiInputService';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { Wash } from '@/components/ui/Wash';
 import { colors, ui } from '@/constants/colors';
@@ -89,10 +89,9 @@ export default function Waiting() {
         <ProgressSteps current={isProcessing ? 3 : 2} />
       </View>
       <View style={styles.body}>
-        <LinearGradient
-          colors={isProcessing ? ['#F2A868', '#F6D9D6'] : ['#F6D9D6', '#F8E3C4']}
-          style={styles.orb}
-        />
+        <View style={styles.orb}>
+          <Maedeubi size={104} breathe />
+        </View>
         <Text style={styles.title}>
           {isProcessing
             ? '매듭이가 두 사람의 편지를 쓰고 있어요'
@@ -126,9 +125,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   orb: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
     marginBottom: 28,
   },
   title: {
