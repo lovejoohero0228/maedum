@@ -8,7 +8,10 @@ export const AI_MODEL = "gpt-4o";
 export function openaiClient(): OpenAI {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-  return new OpenAI({ apiKey });
+  // 동시 접속 시 429(rate limit)가 그대로 사용자 실패로 노출되지 않도록
+  // SDK 내장 지수 백오프 재시도 + 요청 타임아웃을 켠다.
+  // Edge Function wall-clock 한도(150s) 안에서 재시도까지 끝나도록 잡은 값.
+  return new OpenAI({ apiKey, maxRetries: 3, timeout: 45_000 });
 }
 
 // service_role 클라이언트 — RLS 우회 (conflict_outputs 쓰기 등 서버 전용 작업)
