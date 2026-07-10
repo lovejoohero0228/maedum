@@ -1,4 +1,5 @@
 // Supabase 클라이언트 (AGENT.md §2)
+import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -20,6 +21,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // 소셜 로그인(OAuth)용 — 네이티브는 lib/socialAuth.ts가 code를 직접 교환하고,
+    // 웹은 리다이렉트 복귀 시 URL의 code를 자동 감지해 세션을 복원한다.
+    flowType: 'pkce',
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

@@ -13,6 +13,10 @@ export interface Profile {
   id: string;
   display_name: string;
   push_token: string | null;
+  // 013 — 가입 온보딩에서 수집하는 계정 단위 프로필
+  personality_tags: string[] | null;
+  character_key: string | null; // constants/characters.ts 프리셋 키
+  onboarded_at: string | null; // null이면 프로필 온보딩 미완료
 }
 
 export interface Couple {
@@ -27,6 +31,7 @@ export interface Conflict {
   initiator_id: string;
   status: ConflictStatus;
   title: string | null; // 주제 요약 제목 — ai-letters가 분석과 함께 생성 (구 레코드는 null)
+  summary: string | null; // 3문장 이내 중립 요약 — ai-letters 생성 (014 이전 레코드는 null)
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +129,11 @@ export interface MissionItem {
   type: MissionType;
 }
 
+// 오늘 바로 할 수 있는 작은 미션 (013 — 빅 미션과 별도 티어)
+export interface SmallMissionItem {
+  text: string;
+}
+
 export interface ConvoStep {
   step: number;
   who: 'a' | 'b' | 'both';
@@ -162,6 +172,9 @@ export interface ConflictOutputs {
   mindset_b: string | null;
   mission_a: MissionItem[] | null;
   mission_b: MissionItem[] | null;
+  small_mission_a: SmallMissionItem[] | null;
+  small_mission_b: SmallMissionItem[] | null;
+  mission_both: SmallMissionItem[] | null; // 둘이 함께 노력할 것 (014)
   convo_guide: ConvoStep[] | null;
   convo_note: string | null;
 }

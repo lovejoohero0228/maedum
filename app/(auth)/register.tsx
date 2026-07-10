@@ -13,6 +13,7 @@ import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { Wash } from '@/components/ui/Wash';
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Register() {
@@ -37,7 +38,8 @@ export default function Register() {
       showAlert('가입 실패', error.message);
       return;
     }
-    router.replace('/(main)/pair');
+    // 세션이 있으면 (main) 가드가 프로필 온보딩 → 페어링으로 안내한다
+    router.replace('/(main)/home');
   };
 
   return (
@@ -87,6 +89,7 @@ export default function Register() {
           >
             <Text style={ui.primaryPillText}>{loading ? '가입 중…' : '가입하기'}</Text>
           </Pressable>
+          <SocialLoginButtons />
           <Link href="/(auth)/login" style={styles.link}>
             이미 계정이 있어요
           </Link>
@@ -125,7 +128,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.5 },
   link: {
     ...ui.quietCta,
-    marginTop: 20,
+    marginTop: 12,
     alignSelf: 'center',
   },
 });

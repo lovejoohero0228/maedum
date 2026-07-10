@@ -13,6 +13,7 @@ import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { Wash } from '@/components/ui/Wash';
+import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Login() {
@@ -72,6 +73,7 @@ export default function Login() {
           >
             <Text style={ui.primaryPillText}>{loading ? '로그인 중…' : '로그인'}</Text>
           </Pressable>
+          <SocialLoginButtons />
           <Link href="/(auth)/register" style={styles.link}>
             아직 계정이 없어요
           </Link>
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.5 },
   link: {
     ...ui.quietCta,
-    marginTop: 20,
+    marginTop: 12,
     alignSelf: 'center',
   },
 });
