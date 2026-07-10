@@ -95,12 +95,12 @@ export default function Waiting() {
         />
         <Text style={styles.title}>
           {isProcessing
-            ? 'AI가 두 사람의 편지를 쓰고 있어요'
+            ? '매듭이가 두 사람의 편지를 쓰고 있어요'
             : `${partner?.display_name ?? '상대'}의 마음을 기다리는 중`}
         </Text>
         <Text style={styles.desc}>
           {isProcessing
-            ? '날것의 감정을 전달 가능한 언어로 바꾸는 중이에요.\n잠시만 기다려주세요.'
+            ? '날것의 감정을 전달 가능한 언어로 바꾸는 중이에요.\n매듭이가 두 마음을 잇고 있으니, 잠시만 기다려주세요.'
             : '상대도 지금 속마음을 정리하고 있어요.\n둘 다 완료되면 편지가 도착해요.'}
         </Text>
         <ActivityIndicator size="small" color={colors.ink3} style={styles.spinner} />

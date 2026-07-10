@@ -178,7 +178,7 @@ export default function Letter() {
           <>
             <Text style={styles.sectionTitle}>{partnerName}의 속마음</Text>
             <Text style={styles.sectionHint}>
-              AI가 {partnerName}의 이야기를 당신이 이해할 수 있는 말로 정리했어요.
+              매듭이가 {partnerName}의 이야기를 당신이 이해할 수 있는 말로 정리했어요.
             </Text>
             {receivedLetter ? (
               <LetterCard
@@ -212,7 +212,7 @@ export default function Letter() {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>함께 보는 분석</Text>
+        <Text style={styles.sectionTitle}>매듭이가 정리한 우리 이야기</Text>
 
         {/* 내부 필드까지 확인하고 렌더 — AI 응답의 스키마 드리프트로 person_a 등이 빠져 있으면
             undefined 접근으로 화면 전체가 죽어(흰 화면) 버리므로 카드 단위로 건너뛴다 */}

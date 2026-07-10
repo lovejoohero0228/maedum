@@ -406,7 +406,13 @@ export default function Input() {
             const answeredBy = !isPending ? bubbles[i + 1] : null;
             return (
               <View key={i}>
-                <AIChatBubble message={b.content} flag={b.flag} flagText={b.flagText} />
+                <AIChatBubble
+                  message={b.content}
+                  flag={b.flag}
+                  flagText={b.flagText}
+                  // 연속된 매듭이 말풍선에는 이름표를 한 번만
+                  showName={i === 0 || bubbles[i - 1].role !== 'assistant'}
+                />
                 {/* 답변이 끝난 그룹은 고른 값만 남긴다 — 안 고른 칩까지 전부 남기면
                     히스토리가 미선택 칩으로 뒤덮여 "내가 한 말"을 되짚기 어렵다 */}
                 {b.choiceGroups?.length && !isPending && answeredBy?.role === 'user'
@@ -441,7 +447,7 @@ export default function Input() {
         {waiting ? (
           <View style={styles.typing}>
             <ActivityIndicator size="small" color={colors.ink3} />
-            <Text style={styles.typingText}>생각 중…</Text>
+            <Text style={styles.typingText}>매듭이가 생각하는 중…</Text>
           </View>
         ) : null}
 

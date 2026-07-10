@@ -158,7 +158,7 @@ export default function RelationshipProfileScreen() {
       <View style={styles.loadingContainer}>
         <Wash />
         <ActivityIndicator size="small" color={colors.ink2} />
-        <Text style={styles.loadingText}>AI가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
+        <Text style={styles.loadingText}>매듭이가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
       </View>
     );
   }
