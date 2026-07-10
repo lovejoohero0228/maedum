@@ -9,7 +9,7 @@ import { upsertRelationshipProfile } from '@/services/relationshipProfileService
 import { requestReferenceBank } from '@/lib/ai';
 import { showAlert } from '@/lib/alert';
 import { ChoiceSelector, DIRECT_INPUT } from '@/components/chat/ChoiceSelector';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 import {
   RELATIONSHIP_TYPES,
   RELATIONSHIP_DURATION_PRESETS,
@@ -96,7 +96,7 @@ export default function RelationshipProfileScreen() {
   if (saving) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.purpleMid} />
+        <ActivityIndicator size="small" color={colors.ink2} />
         <Text style={styles.loadingText}>AI가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
       </View>
     );
@@ -115,9 +115,9 @@ export default function RelationshipProfileScreen() {
         <Text style={styles.title}>관계 정보</Text>
         <View style={{ width: 24 }} />
       </View>
-      <Text style={styles.stepProgress}>
-        {step} / {TOTAL_STEPS}단계
-      </Text>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {step === 1 ? (
@@ -227,7 +227,7 @@ export default function RelationshipProfileScreen() {
           onPress={() => canProceedStep1 && setStep(2)}
           disabled={!canProceedStep1}
         >
-          <Text style={styles.nextText}>다음</Text>
+          <Text style={ui.primaryPillText}>다음</Text>
         </Pressable>
       ) : null}
     </View>
@@ -245,10 +245,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontSize: 14,
+    ...ui.statementSub,
     color: colors.ink2,
-    textAlign: 'center',
-    fontFamily: fonts.body,
   },
   header: {
     flexDirection: 'row',
@@ -258,62 +256,55 @@ const styles = StyleSheet.create({
   },
   back: { fontSize: 22, color: colors.ink2 },
   title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
-  stepProgress: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: colors.ink3,
-    marginTop: 8,
-    fontFamily: fonts.body,
+  progressTrack: {
+    ...ui.progressTrack,
+    marginTop: 16,
+    marginHorizontal: 28,
   },
-  content: { padding: 20, paddingBottom: 40 },
+  progressFill: ui.progressFill,
+  content: { padding: 24, paddingTop: 36, paddingBottom: 40 },
   question: {
-    fontSize: 18,
-    color: colors.ink,
-    fontFamily: fonts.displayMedium,
-    paddingLeft: 4,
+    ...ui.statement,
+    fontSize: 20,
+    lineHeight: 31,
+    marginBottom: 6,
   },
-  questionSpaced: { marginTop: 28 },
+  questionSpaced: { marginTop: 40 },
   hint: {
+    ...ui.statementSub,
     fontSize: 12,
-    color: colors.ink3,
-    marginTop: 4,
-    paddingLeft: 4,
-    fontFamily: fonts.body,
+    marginBottom: 10,
   },
   durationInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 36,
-    marginTop: 4,
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 12,
   },
   durationInput: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     width: 80,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.ink,
+    textAlign: 'center',
     fontFamily: fonts.body,
   },
   durationSuffix: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },
   durationConfirm: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    ...ui.pill,
     paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  durationConfirmText: { color: '#fff', fontSize: 13, fontFamily: fonts.bodyMedium },
+  durationConfirmText: { ...ui.pillText, fontSize: 13 },
   nextButton: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 14,
-    paddingVertical: 15,
+    ...ui.primaryPill,
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 24,
+    marginHorizontal: 28,
+    marginBottom: 28,
   },
   nextDisabled: { opacity: 0.4 },
-  nextText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyMedium },
 });

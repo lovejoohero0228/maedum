@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,7 +13,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { acceptInviteCode, createInviteCode } from '@/services/conflictService';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Pair() {
   const session = useConflictStore((s) => s.session);
@@ -98,108 +99,109 @@ export default function Pair() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>둘을 연결할 차례예요</Text>
       <Text style={styles.subtitle}>
-        한 명이 초대 코드를 만들고, 상대가 그 코드를 입력하면 연결돼요.
+        한 명이 초대 코드를 만들고,{'\n'}상대가 그 코드를 입력하면 연결돼요.
       </Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>초대 코드 만들기</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>초대 코드 만들기</Text>
         {myCode ? (
           <>
             <Text style={styles.code}>{myCode}</Text>
             <Text style={styles.hint}>
-              이 코드를 상대에게 알려주세요. 상대가 입력하면 자동으로 연결돼요.
+              이 코드를 상대에게 알려주세요.{'\n'}상대가 입력하면 자동으로 연결돼요.
             </Text>
           </>
         ) : (
-          <Pressable style={styles.button} onPress={onCreate} disabled={busy}>
-            <Text style={styles.buttonText}>코드 생성</Text>
+          <Pressable style={styles.pillButton} onPress={onCreate} disabled={busy}>
+            <Text style={ui.pillText}>코드 생성</Text>
           </Pressable>
         )}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>받은 코드 입력하기</Text>
+      <View style={styles.divider} />
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>받은 코드 입력하기</Text>
         <TextInput
           style={styles.input}
-          placeholder="예: A1B2C3"
+          placeholder="A1B2C3"
           placeholderTextColor={colors.ink3}
           autoCapitalize="characters"
           value={inputCode}
           onChangeText={setInputCode}
         />
-        <Pressable style={styles.button} onPress={onAccept} disabled={busy}>
-          <Text style={styles.buttonText}>{busy ? '연결 중…' : '연결하기'}</Text>
+        <Pressable style={styles.primaryButton} onPress={onAccept} disabled={busy}>
+          <Text style={ui.primaryPillText}>{busy ? '연결 중…' : '연결하기'}</Text>
         </Pressable>
       </View>
 
       <Pressable onPress={onLogout}>
         <Text style={styles.logout}>로그아웃</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 80 },
-  title: { fontSize: 24, color: colors.ink, fontFamily: fonts.displayMedium },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 28, paddingTop: 120, paddingBottom: 48, alignItems: 'center' },
+  title: { ...ui.statement, fontSize: 24, lineHeight: 36 },
   subtitle: {
-    fontSize: 14,
-    color: colors.ink3,
-    marginTop: 8,
-    marginBottom: 24,
-    lineHeight: 21,
-    fontFamily: fonts.body,
+    ...ui.statementSub,
+    marginTop: 12,
+    marginBottom: 56,
   },
-  card: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 18,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    fontSize: 14,
-    color: colors.ink2,
-    fontFamily: fonts.bodyMedium,
-    marginBottom: 12,
+  section: { alignItems: 'center', alignSelf: 'stretch' },
+  sectionLabel: {
+    ...ui.quietCta,
+    marginBottom: 20,
   },
   code: {
-    fontSize: 32,
-    letterSpacing: 6,
-    color: colors.purpleText,
+    fontSize: 34,
+    letterSpacing: 8,
+    color: colors.ink,
     fontFamily: fonts.displayMedium,
     textAlign: 'center',
-    marginVertical: 8,
+    marginBottom: 12,
   },
-  hint: { fontSize: 12, color: colors.ink3, lineHeight: 18, fontFamily: fonts.body },
+  hint: {
+    ...ui.statementSub,
+    fontSize: 12,
+    lineHeight: 19,
+  },
+  pillButton: {
+    ...ui.pill,
+    minWidth: 160,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.line,
+    alignSelf: 'center',
+    width: 48,
+    marginVertical: 44,
+  },
   input: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    letterSpacing: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    paddingVertical: 10,
+    fontSize: 22,
+    letterSpacing: 6,
     color: colors.ink,
-    marginBottom: 10,
-    fontFamily: fonts.body,
-  },
-  button: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  buttonText: { color: '#fff', fontSize: 14, fontFamily: fonts.bodyMedium },
-  logout: {
     textAlign: 'center',
-    color: colors.ink3,
-    fontSize: 13,
-    marginTop: 12,
-    fontFamily: fonts.body,
+    minWidth: 200,
+    marginBottom: 24,
+    fontFamily: fonts.display,
+  },
+  primaryButton: {
+    ...ui.primaryPill,
+    minWidth: 200,
+  },
+  logout: {
+    ...ui.quietCta,
+    letterSpacing: 2,
+    marginTop: 64,
   },
 });

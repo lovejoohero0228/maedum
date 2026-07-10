@@ -20,8 +20,7 @@ import { AIChatBubble } from '@/components/chat/AIChatBubble';
 import { UserChatBubble } from '@/components/chat/UserChatBubble';
 import { ChoiceSelector } from '@/components/chat/ChoiceSelector';
 import { ScaleSelector } from '@/components/chat/ScaleSelector';
-import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui, userTheme } from '@/constants/colors';
 import {
   FIELD_LABELS,
   FIELD_ORDER,
@@ -332,7 +331,14 @@ export default function Input() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ProgressSteps current={2} />
+      {/* 얇은 진행 바 — 항목 진행도 (Find Your Faith 상단 바) */}
+      <View style={styles.progressWrap}>
+        <View style={ui.progressTrack}>
+          <View
+            style={[ui.progressFill, { width: `${(fieldIndex / FIELD_ORDER.length) * 100}%` }]}
+          />
+        </View>
+      </View>
       <View style={styles.fieldHeader}>
         <Text style={styles.fieldProgress}>
           {fieldIndex} / {FIELD_ORDER.length} 항목
@@ -364,7 +370,10 @@ export default function Input() {
               onPress={() => restartFrom(f)}
               style={[
                 styles.chip,
-                isCurrent && { borderColor: myColor(), backgroundColor: colors.bgCard },
+                isCurrent && {
+                  borderColor: userTheme(myColor()).mid,
+                  backgroundColor: colors.bgCard,
+                },
                 !isPast && !isCurrent && styles.chipFuture,
               ]}
               hitSlop={4}
@@ -372,7 +381,7 @@ export default function Input() {
               <Text
                 style={[
                   styles.chipText,
-                  isCurrent && { color: myColor() },
+                  isCurrent && { color: userTheme(myColor()).text },
                   isPast && styles.chipPastText,
                   !isPast && !isCurrent && styles.chipDisabledText,
                 ]}
@@ -429,7 +438,7 @@ export default function Input() {
 
         {waiting ? (
           <View style={styles.typing}>
-            <ActivityIndicator size="small" color={colors.purpleMid} />
+            <ActivityIndicator size="small" color={colors.ink3} />
             <Text style={styles.typingText}>생각 중…</Text>
           </View>
         ) : null}
@@ -544,7 +553,8 @@ export default function Input() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 60 },
+  progressWrap: { paddingHorizontal: 24, marginBottom: 14 },
   fieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -568,10 +578,10 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 10,
+    borderRadius: 100,
+    paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: colors.bgCard,
+    backgroundColor: 'transparent',
   },
   chipFuture: { backgroundColor: 'transparent', borderColor: colors.line2 },
   chipText: { fontSize: 11, fontFamily: fonts.bodyMedium, color: colors.ink2 },
@@ -596,15 +606,15 @@ const styles = StyleSheet.create({
   },
   groupFooter: { gap: 8, marginTop: 8, paddingLeft: 36, alignItems: 'flex-start' },
   groupSubmit: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 12,
+    backgroundColor: colors.ink,
+    borderRadius: 100,
     paddingHorizontal: 20,
-    paddingVertical: 11,
+    paddingVertical: 12,
     alignSelf: 'stretch',
     alignItems: 'center',
   },
   groupSubmitDisabled: { backgroundColor: colors.line2 },
-  groupSubmitText: { color: '#fff', fontSize: 14, fontFamily: fonts.bodyMedium },
+  groupSubmitText: { color: colors.bg, fontSize: 14, fontFamily: fonts.bodyMedium },
   groupSubmitTextDisabled: { color: colors.ink3 },
   groupDirectToggle: { paddingLeft: 36, marginTop: 6 },
   groupDirectToggleText: {
@@ -632,41 +642,42 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   groupDirectAdd: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    backgroundColor: colors.ink,
+    borderRadius: 100,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  groupDirectAddText: { color: '#fff', fontSize: 12, fontFamily: fonts.bodyMedium },
+  groupDirectAddText: { color: colors.bg, fontSize: 12, fontFamily: fonts.bodyMedium },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.line2,
-    backgroundColor: colors.bgCard,
+    borderTopColor: colors.line,
+    backgroundColor: colors.bg,
   },
   input: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: 22,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 120,
     fontSize: 15,
     color: colors.ink,
     fontFamily: fonts.body,
+    backgroundColor: colors.bgCard,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.purpleMid,
+    backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#fff', fontSize: 18 },
+  sendText: { color: colors.bg, fontSize: 18 },
 });

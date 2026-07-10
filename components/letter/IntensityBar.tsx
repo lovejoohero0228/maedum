@@ -1,4 +1,4 @@
-// 갈등/속상함 크기 바 (AGENT.md §7-3) — value/10 * 100% fill
+// 갈등/속상함 크기 바 (AGENT.md §7-3) — value/10 * 100% fill, 얇은 헤어라인 트랙
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -25,19 +25,19 @@ export function IntensityBar({ label, value, color }: IntensityBarProps) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginVertical: 6 },
+  wrap: { marginVertical: 8 },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   label: { fontSize: 13, color: colors.ink2, fontFamily: fonts.body },
   value: { fontSize: 13, fontFamily: fonts.bodyMedium },
   track: {
-    height: 8,
-    borderRadius: 4,
+    height: 5,
+    borderRadius: 100,
     backgroundColor: colors.line2,
     overflow: 'hidden',
   },
-  fill: { height: '100%', borderRadius: 4 },
+  fill: { height: '100%', borderRadius: 100 },
 });

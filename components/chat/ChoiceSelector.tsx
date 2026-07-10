@@ -1,4 +1,4 @@
-// 선택지 버튼 그룹 (AGENT.md §7-1)
+// 선택지 버튼 그룹 (AGENT.md §7-1) — 밝은 알약형 선택지, 선택 시 먹색 채움
 // 단일 선택(기본): 선택지는 2~4개, allowDirectInput이면 마지막에 "직접 입력할게요 →" 추가, 탭 즉시 onSelect fire.
 // 복수 선택(multiple=true): 체크박스처럼 토글만 하고, "선택 완료" 버튼을 눌러야 onSubmit이 fire된다.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -53,13 +53,12 @@ export function ChoiceSelector({
             disabled={!interactive}
             style={[
               styles.choice,
-              { borderColor: isSelected ? theme.mid : colors.line },
-              isSelected && { backgroundColor: theme.tint },
+              isSelected && { backgroundColor: colors.ink },
               !interactive && !isSelected && styles.choiceMuted,
             ]}
           >
-            <Text style={[styles.choiceText, isSelected && { color: theme.text }]}>
-              {multiple ? `${isSelected ? '☑' : '☐'} ${choice}` : choice}
+            <Text style={[styles.choiceText, isSelected && styles.choiceTextSelected]}>
+              {choice}
             </Text>
           </Pressable>
         );
@@ -70,26 +69,19 @@ export function ChoiceSelector({
         <Pressable
           onPress={onSubmit}
           disabled={selectedValues.length === 0}
-          style={[
-            styles.choice,
-            styles.submit,
-            { backgroundColor: selectedValues.length === 0 ? colors.line2 : theme.mid },
-          ]}
+          style={styles.submit}
         >
           <Text
             style={[
               styles.submitText,
-              { color: selectedValues.length === 0 ? colors.ink3 : '#fff' },
+              { color: selectedValues.length === 0 ? colors.ink3 : theme.text },
             ]}
           >
             선택 완료
           </Text>
         </Pressable>
       ) : allowDirectInput ? (
-        <Pressable
-          onPress={() => onSelect(DIRECT_INPUT)}
-          style={[styles.choice, styles.direct]}
-        >
+        <Pressable onPress={() => onSelect(DIRECT_INPUT)} style={styles.direct} hitSlop={6}>
           <Text style={styles.directText}>직접 입력할게요 →</Text>
         </Pressable>
       ) : null}
@@ -98,30 +90,31 @@ export function ChoiceSelector({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8, marginVertical: 8, paddingLeft: 36 },
+  wrap: { gap: 8, marginVertical: 10, paddingLeft: 23, alignItems: 'flex-start' },
   choice: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
     backgroundColor: colors.bgCard,
+    borderRadius: 100,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
   },
   choiceText: {
     fontSize: 14,
-    color: colors.ink2,
+    color: colors.ink,
     fontFamily: fonts.body,
   },
-  choiceMuted: { opacity: 0.5 },
-  direct: { borderStyle: 'dashed' },
+  choiceTextSelected: { color: colors.bg, fontFamily: fonts.bodyMedium },
+  choiceMuted: { opacity: 0.45 },
+  direct: { paddingVertical: 6, paddingHorizontal: 4 },
   directText: {
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 1,
     color: colors.ink3,
-    fontFamily: fonts.body,
+    fontFamily: fonts.bodyMedium,
   },
-  submit: { borderWidth: 0, alignItems: 'center' },
+  submit: { paddingVertical: 8, paddingHorizontal: 4 },
   submitText: {
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 2,
     fontFamily: fonts.bodyMedium,
   },
 });

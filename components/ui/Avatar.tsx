@@ -1,4 +1,4 @@
-// 이름 이니셜 아바타 — 사용자 색상 테마
+// 이름 이니셜 아바타 — 사용자 색 틴트 배경 + 잉크 톤 이니셜, 헤어라인 링
 import { StyleSheet, Text, View } from 'react-native';
 import { fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -18,11 +18,12 @@ export function Avatar({ name, color, size = 36 }: AvatarProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: theme.mid,
+          backgroundColor: theme.tint,
+          borderColor: theme.mid,
         },
       ]}
     >
-      <Text style={[styles.initial, { fontSize: size * 0.42 }]}>
+      <Text style={[styles.initial, { fontSize: size * 0.4, color: theme.text }]}>
         {name.slice(0, 1)}
       </Text>
     </View>
@@ -30,6 +31,10 @@ export function Avatar({ name, color, size = 36 }: AvatarProps) {
 }
 
 const styles = StyleSheet.create({
-  circle: { alignItems: 'center', justifyContent: 'center' },
-  initial: { color: '#fff', fontFamily: fonts.bodyMedium },
+  circle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  initial: { fontFamily: fonts.displayMedium },
 });

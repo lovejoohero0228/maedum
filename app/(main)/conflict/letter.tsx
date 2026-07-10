@@ -22,7 +22,7 @@ import { LetterCard } from '@/components/letter/LetterCard';
 import { IntensityBar } from '@/components/letter/IntensityBar';
 import { AnalysisCard, AnalysisText } from '@/components/letter/AnalysisCard';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Letter() {
   const session = useConflictStore((s) => s.session);
@@ -125,8 +125,9 @@ export default function Letter() {
   if (!outputs || !couple || !session) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <ActivityIndicator size="large" color={colors.purpleMid} />
+        <Text style={styles.loadingMark}>💌</Text>
         <Text style={styles.loadingText}>편지를 불러오는 중…</Text>
+        <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
       </View>
     );
   }
@@ -152,7 +153,7 @@ export default function Letter() {
                 letterTab === 'received' && styles.letterTabTextActive,
               ]}
             >
-              💌 받은 편지
+              받은 편지
             </Text>
           </Pressable>
           <Pressable
@@ -162,14 +163,14 @@ export default function Letter() {
             <Text
               style={[styles.letterTabText, letterTab === 'sent' && styles.letterTabTextActive]}
             >
-              ✉️ 내가 보낸 편지
+              내가 보낸 편지
             </Text>
           </Pressable>
         </View>
 
         {letterTab === 'received' ? (
           <>
-            <Text style={styles.sectionTitle}>💌 {partnerName}의 속마음</Text>
+            <Text style={styles.sectionTitle}>{partnerName}의 속마음</Text>
             <Text style={styles.sectionHint}>
               AI가 {partnerName}의 이야기를 당신이 이해할 수 있는 말로 정리했어요.
             </Text>
@@ -183,7 +184,7 @@ export default function Letter() {
           </>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>✉️ 내가 전한 속마음</Text>
+            <Text style={styles.sectionTitle}>내가 전한 속마음</Text>
             <Text style={styles.sectionHint}>
               내가 정리한 이야기가 {partnerName}에게 이렇게 전해졌어요.
             </Text>
@@ -205,7 +206,7 @@ export default function Letter() {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>🔍 함께 보는 분석</Text>
+        <Text style={styles.sectionTitle}>함께 보는 분석</Text>
 
         {/* 내부 필드까지 확인하고 렌더 — AI 응답의 스키마 드리프트로 person_a 등이 빠져 있으면
             undefined 접근으로 화면 전체가 죽어(흰 화면) 버리므로 카드 단위로 건너뛴다 */}
@@ -260,65 +261,64 @@ export default function Letter() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   loading: { alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 14, fontSize: 13, color: colors.ink3, fontFamily: fonts.body },
+  loadingMark: { fontSize: 30, marginBottom: 18 },
+  loadingText: { ...ui.statementSub },
+  loadingSpinner: { marginTop: 22, opacity: 0.7 },
   letterTabs: {
     flexDirection: 'row',
-    backgroundColor: colors.line2,
-    borderRadius: 12,
-    padding: 3,
-    gap: 3,
+    justifyContent: 'center',
+    gap: 28,
+    marginBottom: 8,
   },
   letterTab: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
   },
-  letterTabActive: { backgroundColor: colors.bgCard },
+  letterTabActive: { borderBottomColor: colors.ink },
   letterTabText: { fontSize: 13, color: colors.ink3, fontFamily: fonts.bodyMedium },
   letterTabTextActive: { color: colors.ink },
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 24, paddingBottom: 48 },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 19,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    marginTop: 16,
-    marginBottom: 4,
+    textAlign: 'center',
+    marginTop: 28,
+    marginBottom: 6,
   },
   sectionHint: {
+    ...ui.statementSub,
     fontSize: 12,
-    color: colors.ink3,
-    marginBottom: 8,
-    fontFamily: fonts.body,
+    lineHeight: 19,
+    marginBottom: 12,
   },
   scalesCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 16,
-    marginVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingTop: 18,
+    paddingBottom: 6,
+    marginTop: 20,
   },
   scalesTitle: {
     fontSize: 13,
     color: colors.ink2,
     fontFamily: fonts.bodyMedium,
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   readyButton: {
-    backgroundColor: colors.tealMid,
-    borderRadius: 14,
-    paddingVertical: 15,
+    ...ui.primaryPill,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 32,
   },
   readyDisabled: { opacity: 0.55 },
-  readyText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyMedium },
+  readyText: { ...ui.primaryPillText },
   readyHint: {
     textAlign: 'center',
     fontSize: 12,
     color: colors.ink3,
-    marginTop: 10,
+    marginTop: 12,
     fontFamily: fonts.body,
   },
 });

@@ -12,7 +12,7 @@ import {
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -37,37 +37,42 @@ export default function Login() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>맺음</Text>
-        <Text style={styles.tagline}>다툼의 끝을, 다시 맺다</Text>
+        <View style={styles.hero}>
+          <Text style={styles.mark}>❦</Text>
+          <Text style={styles.logo}>맺음</Text>
+          <Text style={styles.tagline}>다툼의 끝을, 다시 맺다</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="이메일"
-          placeholderTextColor={colors.ink3}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="비밀번호"
-          placeholderTextColor={colors.ink3}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="이메일"
+            placeholderTextColor={colors.ink3}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="비밀번호"
+            placeholderTextColor={colors.ink3}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={onLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? '로그인 중…' : '로그인'}</Text>
-        </Pressable>
+          <Pressable
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={onLogin}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? '로그인 중…' : '로그인'}</Text>
+          </Pressable>
+        </View>
 
         <Link href="/(auth)/register" style={styles.link}>
-          아직 계정이 없어요 →
+          아직 계정이 없어요
         </Link>
       </View>
     </KeyboardAvoidingView>
@@ -76,47 +81,41 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28 },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 36 },
+  hero: { alignItems: 'center', marginBottom: 56 },
+  mark: { fontSize: 26, color: colors.ink, marginBottom: 14 },
   logo: {
-    fontSize: 40,
+    fontSize: 38,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
     textAlign: 'center',
   },
   tagline: {
-    fontSize: 14,
-    color: colors.ink3,
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 40,
-    fontFamily: fonts.body,
+    ...ui.statementSub,
+    marginTop: 10,
   },
+  form: { alignSelf: 'stretch' },
   input: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.line,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 15,
+    paddingHorizontal: 2,
+    paddingVertical: 12,
+    fontSize: 16,
     color: colors.ink,
-    marginBottom: 10,
+    marginBottom: 18,
     fontFamily: fonts.body,
+    textAlign: 'center',
   },
   button: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 12,
-    paddingVertical: 14,
+    ...ui.primaryPill,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 28,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyMedium },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: ui.primaryPillText,
   link: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: colors.purpleText,
-    fontSize: 14,
-    fontFamily: fonts.body,
+    ...ui.quietCta,
+    marginTop: 32,
+    alignSelf: 'center',
   },
 });

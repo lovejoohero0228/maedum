@@ -1,4 +1,4 @@
-// 중재자 분석 카드 — 3개 섹션(시점/온도/이해)을 공용 레이아웃으로 표시
+// 중재자 분석 — 박스 대신 헤어라인 디바이더로 나뉘는 섹션, 세리프 제목
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '@/constants/colors';
 
@@ -10,7 +10,7 @@ interface AnalysisCardProps {
 
 export function AnalysisCard({ icon, title, children }: AnalysisCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={styles.section}>
       <View style={styles.header}>
         <Text style={styles.icon}>{icon}</Text>
         <Text style={styles.title}>{title}</Text>
@@ -25,31 +25,30 @@ export function AnalysisText({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 16,
-    marginVertical: 6,
+  section: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    paddingTop: 18,
+    paddingBottom: 10,
+    marginVertical: 2,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 6,
+    marginBottom: 10,
+    gap: 8,
   },
-  icon: { fontSize: 16 },
+  icon: { fontSize: 14 },
   title: {
-    fontSize: 14,
-    color: colors.purpleText,
-    fontFamily: fonts.bodyMedium,
+    fontSize: 16,
+    color: colors.ink,
+    fontFamily: fonts.displayMedium,
   },
   body: {
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 23,
     color: colors.ink2,
     fontFamily: fonts.body,
-    marginBottom: 4,
+    marginBottom: 6,
   },
 });

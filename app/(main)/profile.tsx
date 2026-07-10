@@ -7,7 +7,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { unpairCouple } from '@/services/conflictService';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Profile() {
   const session = useConflictStore((s) => s.session);
@@ -47,38 +47,40 @@ export default function Profile() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.back}>←</Text>
         </Pressable>
         <Text style={styles.title}>프로필</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.card}>
-        {profile ? (
-          <View style={styles.me}>
-            <Avatar name={profile.display_name} color={myColor()} size={56} />
-            <Text style={styles.name}>{profile.display_name}</Text>
-            <Text style={styles.email}>{session?.user.email}</Text>
-          </View>
-        ) : null}
-      </View>
+      {profile ? (
+        <View style={styles.me}>
+          <Avatar name={profile.display_name} color={myColor()} size={64} />
+          <Text style={styles.name}>{profile.display_name}</Text>
+          <Text style={styles.email}>{session?.user.email}</Text>
+        </View>
+      ) : null}
 
-      <Pressable style={styles.card} onPress={() => router.push('/(main)/relationship-profile')}>
-        <Text style={styles.cardLabel}>관계 정보</Text>
-        <Text style={styles.pairLink}>관계 정보 수정 →</Text>
+      <View style={styles.divider} />
+
+      <Pressable
+        style={styles.section}
+        onPress={() => router.push('/(main)/relationship-profile')}
+      >
+        <Text style={styles.sectionLabel}>관계 정보</Text>
+        <Text style={styles.sectionLink}>관계 정보 수정</Text>
       </Pressable>
 
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>연결된 상대</Text>
+      <View style={styles.divider} />
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>연결된 상대</Text>
         {couples.length > 0 ? (
-          couples.map((c, i) => {
+          couples.map((c) => {
             const p = partners[c.id];
             return (
-              <View
-                key={c.id}
-                style={[styles.partnerRow, i > 0 && styles.partnerRowDivider]}
-              >
+              <View key={c.id} style={styles.partnerRow}>
                 <Avatar
                   name={p?.display_name ?? '?'}
                   color={myColor() === 'blue' ? 'coral' : 'blue'}
@@ -100,15 +102,15 @@ export default function Profile() {
           })
         ) : (
           <Pressable onPress={() => router.push('/(main)/pair')}>
-            <Text style={styles.pairLink}>아직 연결 안 됨 → 연결하기</Text>
+            <Text style={styles.sectionLink}>아직 연결 안 됨 → 연결하기</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => router.push('/(main)/pair')} style={styles.addPartnerButton}>
-          <Text style={styles.addPartnerButtonText}>＋ 새로운 상대 연결하기</Text>
+        <Pressable onPress={() => router.push('/(main)/pair')} hitSlop={8}>
+          <Text style={styles.addPartnerLink}>＋ 새로운 상대 연결하기</Text>
         </Pressable>
       </View>
 
-      <Pressable style={styles.logout} onPress={onLogout}>
+      <Pressable style={styles.logout} onPress={onLogout} hitSlop={8}>
         <Text style={styles.logoutText}>로그아웃</Text>
       </Pressable>
     </View>
@@ -116,64 +118,60 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 28 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 36,
   },
   back: { fontSize: 22, color: colors.ink2 },
   title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
-  card: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 20,
-    marginBottom: 12,
-  },
   me: { alignItems: 'center' },
   name: {
-    fontSize: 18,
+    fontSize: 20,
     color: colors.ink,
-    marginTop: 10,
+    marginTop: 14,
     fontFamily: fonts.displayMedium,
   },
   email: { fontSize: 13, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
-  cardLabel: {
+  divider: {
+    height: 1,
+    backgroundColor: colors.line,
+    alignSelf: 'center',
+    width: 48,
+    marginVertical: 32,
+  },
+  section: { alignItems: 'center' },
+  sectionLabel: {
+    ...ui.quietCta,
     fontSize: 12,
-    color: colors.ink3,
-    marginBottom: 10,
-    fontFamily: fonts.body,
+    letterSpacing: 2,
+    marginBottom: 14,
   },
-  partnerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  partnerRowDivider: { borderTopWidth: 1, borderTopColor: colors.line2 },
-  partnerName: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium, flex: 1 },
-  pairLink: { fontSize: 14, color: colors.purpleText, fontFamily: fonts.body },
-  addPartnerButton: {
-    marginTop: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.purpleMid,
-    paddingVertical: 11,
+  sectionLink: { fontSize: 14, color: colors.ink2, fontFamily: fonts.bodyMedium },
+  partnerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
   },
-  addPartnerButtonText: { fontSize: 13, color: colors.purpleText, fontFamily: fonts.bodyMedium },
-  unpairButton: { marginLeft: 'auto' },
+  partnerName: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
+  unpairButton: { marginLeft: 12 },
   unpairLink: {
     fontSize: 12,
     color: colors.coralText,
     textDecorationLine: 'underline',
     fontFamily: fonts.body,
   },
-  logout: {
-    marginTop: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingVertical: 13,
-    alignItems: 'center',
+  addPartnerLink: {
+    fontSize: 13,
+    color: colors.ink3,
+    fontFamily: fonts.bodyMedium,
+    marginTop: 16,
   },
-  logoutText: { fontSize: 14, color: colors.coralText, fontFamily: fonts.body },
+  logout: { marginTop: 'auto', marginBottom: 48, alignItems: 'center' },
+  logoutText: { ...ui.quietCta, letterSpacing: 2, color: colors.coralText },
 });

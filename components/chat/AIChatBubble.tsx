@@ -1,4 +1,4 @@
-// AI 메시지 버블 — purple 테마 (AGENT.md §8)
+// AI 메시지 — 배경 없는 잉크 세리프 텍스트, 세피아 ✦ 마커 (Find Your Faith 스타일)
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '@/constants/colors';
 import { FlagBadge } from './FlagBadge';
@@ -13,14 +13,10 @@ interface AIChatBubbleProps {
 export function AIChatBubble({ message, flag, flagText }: AIChatBubbleProps) {
   return (
     <View style={styles.row}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>✦</Text>
-      </View>
+      <Text style={styles.marker}>✦</Text>
       <View style={styles.bubbleWrap}>
         {flag ? <FlagBadge flag={flag} text={flagText} /> : null}
-        <View style={styles.bubble}>
-          <Text style={styles.text}>{message}</Text>
-        </View>
+        <Text style={styles.text}>{message}</Text>
       </View>
     </View>
   );
@@ -30,31 +26,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginVertical: 6,
-    paddingRight: 48,
+    marginVertical: 10,
+    paddingRight: 40,
   },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.purpleMid,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    marginTop: 2,
+  marker: {
+    color: colors.purpleMid,
+    fontSize: 13,
+    marginRight: 10,
+    marginTop: 5,
   },
-  avatarText: { color: '#fff', fontSize: 14 },
   bubbleWrap: { flex: 1 },
-  bubble: {
-    backgroundColor: colors.purpleTint,
-    borderRadius: 14,
-    borderTopLeftRadius: 4,
-    padding: 12,
-  },
   text: {
     color: colors.ink,
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 27,
+    fontFamily: fonts.display,
   },
 });

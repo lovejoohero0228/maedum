@@ -8,7 +8,7 @@ import { startConflict, joinConflict } from '@/services/conflictService';
 import { sendPushTo } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Start() {
   const session = useConflictStore((s) => s.session);
@@ -67,19 +67,15 @@ export default function Start() {
         </Text>
 
         <View style={styles.rules}>
-          <Text style={styles.rule}>• 솔직하게, 구체적으로</Text>
-          <Text style={styles.rule}>• 상대 험담이 아니라 내 마음 중심으로</Text>
-          <Text style={styles.rule}>• 작성한 원문은 상대에게 그대로 전달되지 않아요</Text>
+          <Text style={styles.rule}>솔직하게, 구체적으로</Text>
+          <Text style={styles.rule}>상대 험담이 아니라 내 마음 중심으로</Text>
+          <Text style={styles.rule}>작성한 원문은 상대에게 그대로 전달되지 않아요</Text>
         </View>
       </View>
 
-      <Pressable
-        style={[styles.button, busy && styles.buttonDisabled]}
-        onPress={onBegin}
-        disabled={busy}
-      >
-        <Text style={styles.buttonText}>
-          {busy ? '준비 중…' : partnerInitiated ? '나도 시작하기' : '시작하기'}
+      <Pressable onPress={onBegin} disabled={busy} style={styles.begin} hitSlop={12}>
+        <Text style={[styles.beginText, busy && styles.beginDisabled]}>
+          {busy ? '준비 중…' : partnerInitiated ? '탭하여 함께 시작하기' : '탭하여 시작하기'}
         </Text>
       </Pressable>
       <Pressable onPress={() => router.back()}>
@@ -90,50 +86,40 @@ export default function Start() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 56 },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 28, paddingTop: 56 },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  icon: { fontSize: 40, marginBottom: 16 },
+  icon: { fontSize: 30, marginBottom: 22 },
   title: {
-    fontSize: 22,
-    color: colors.ink,
-    textAlign: 'center',
-    fontFamily: fonts.displayMedium,
-    marginBottom: 14,
+    ...ui.statement,
+    marginBottom: 16,
   },
   desc: {
-    fontSize: 14,
-    lineHeight: 23,
-    color: colors.ink2,
-    textAlign: 'center',
-    fontFamily: fonts.body,
-    marginBottom: 24,
+    ...ui.statementSub,
+    marginBottom: 36,
   },
   rules: {
-    backgroundColor: colors.purpleTint,
-    borderRadius: 14,
-    padding: 16,
     alignSelf: 'stretch',
+    gap: 6,
   },
   rule: {
     fontSize: 13,
-    lineHeight: 22,
-    color: colors.purpleText,
+    lineHeight: 21,
+    color: colors.ink3,
     fontFamily: fonts.body,
+    textAlign: 'center',
   },
-  button: {
-    backgroundColor: colors.purpleMid,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
+  begin: { paddingVertical: 10 },
+  beginText: {
+    ...ui.quietCta,
+    color: colors.ink,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyMedium },
+  beginDisabled: { color: colors.ink3 },
   cancel: {
     textAlign: 'center',
     color: colors.ink3,
     fontSize: 13,
-    marginTop: 14,
-    marginBottom: 10,
+    marginTop: 18,
+    marginBottom: 12,
     fontFamily: fonts.body,
   },
 });

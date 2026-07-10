@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { deleteConflict } from '@/services/conflictService';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 import type { Conflict, ConflictStatus } from '@/lib/types';
 
 // 상태 → 이어갈 화면 (AGENT.md §4 플로우)
@@ -126,8 +126,8 @@ export default function Home() {
       <View style={styles.header}>
         <Text style={styles.logo}>맺음</Text>
         <View style={styles.headerRight}>
-          <Pressable style={styles.addPartnerButton} onPress={() => router.push('/(main)/pair')}>
-            <Text style={styles.addPartnerButtonText}>＋ 상대 추가</Text>
+          <Pressable onPress={() => router.push('/(main)/pair')} hitSlop={8}>
+            <Text style={styles.addPartnerLink}>＋ 상대 추가</Text>
           </Pressable>
           <Pressable onPress={() => router.push('/(main)/profile')}>
             {profile ? <Avatar name={profile.display_name} color={myColor()} size={34} /> : null}
@@ -148,7 +148,7 @@ export default function Home() {
             return (
               <Pressable
                 key={c.id}
-                style={[styles.partnerChip, isActive && styles.partnerChipActive]}
+                style={[styles.partnerChip, !isActive && styles.partnerChipInactive]}
                 onPress={() => selectCouple(c.id)}
               >
                 <Avatar name={p?.display_name ?? '?'} color="coral" size={32} />
@@ -158,6 +158,7 @@ export default function Home() {
                 >
                   {p?.display_name ?? '상대'}
                 </Text>
+                <View style={[styles.partnerChipMark, isActive && styles.partnerChipMarkActive]} />
               </Pressable>
             );
           })}
@@ -167,65 +168,66 @@ export default function Home() {
         </ScrollView>
       ) : null}
 
-      {couple && partner ? (
-        <View style={styles.coupleCard}>
-          <View style={styles.coupleRow}>
-            <Avatar name={profile?.display_name ?? ''} color={myColor()} size={44} />
-            <Text style={styles.heart}>♥</Text>
-            <Avatar
-              name={partner.display_name}
-              color={myColor() === 'blue' ? 'coral' : 'blue'}
-              size={44}
-            />
+      <View style={styles.centerArea}>
+        {couple && partner ? (
+          <View style={styles.coupleBlock}>
+            <View style={styles.coupleRow}>
+              <Avatar name={profile?.display_name ?? ''} color={myColor()} size={44} />
+              <Text style={styles.heart}>♥</Text>
+              <Avatar
+                name={partner.display_name}
+                color={myColor() === 'blue' ? 'coral' : 'blue'}
+                size={44}
+              />
+            </View>
+            <Text style={styles.coupleNames}>
+              {profile?.display_name} & {partner.display_name}
+            </Text>
           </View>
-          <Text style={styles.coupleNames}>
-            {profile?.display_name} & {partner.display_name}
-          </Text>
-        </View>
-      ) : (
-        <Pressable style={styles.pairCard} onPress={() => router.push('/(main)/pair')}>
-          <Text style={styles.pairText}>아직 상대와 연결되지 않았어요 → 연결하기</Text>
-        </Pressable>
-      )}
+        ) : (
+          <Pressable style={styles.coupleBlock} onPress={() => router.push('/(main)/pair')}>
+            <Text style={ui.statementSub}>아직 상대와 연결되지 않았어요.</Text>
+            <Text style={styles.quietLink}>연결하기</Text>
+          </Pressable>
+        )}
 
-      {conflict && conflict.status !== 'resolved' ? (
-        <View style={styles.resumeCard}>
-          <Pressable onPress={onResume}>
-            <Text style={styles.resumeLabel}>
-              {partnerStarted
-                ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
-                : '진행 중인 맺음'}
+        {conflict && conflict.status !== 'resolved' ? (
+          <View style={styles.focal}>
+            <Pressable onPress={onResume} style={styles.focalPress}>
+              <Text style={ui.statementSub}>
+                {partnerStarted
+                  ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
+                  : '진행 중인 맺음'}
+              </Text>
+              <Text style={styles.focalStatement}>{STATUS_LABEL[conflict.status]}</Text>
+              <Text style={styles.quietLink}>이어가기</Text>
+            </Pressable>
+            <Pressable onPress={onDeleteConflict} disabled={deleting} hitSlop={8}>
+              <Text style={styles.resumeDelete}>
+                {deleting ? '삭제 중…' : '삭제하고 다시 시작'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : needsRelationshipSetup ? (
+          <Pressable style={styles.focal} onPress={onSetupRelationship}>
+            <Text style={styles.startIcon}>📝</Text>
+            <Text style={styles.focalStatement}>관계 정보 입력하기</Text>
+            <Text style={ui.statementSub}>
+              두 사람 이야기를 먼저 알려주면{'\n'}더 정확한 질문을 받을 수 있어요
             </Text>
-            <Text style={styles.resumeStatus}>{STATUS_LABEL[conflict.status]}</Text>
-            <Text style={styles.resumeCta}>이어가기 →</Text>
           </Pressable>
-          <Pressable onPress={onDeleteConflict} disabled={deleting} hitSlop={8}>
-            <Text style={styles.resumeDelete}>
-              {deleting ? '삭제 중…' : '삭제하고 다시 시작'}
-            </Text>
+        ) : (
+          <Pressable
+            style={[styles.focal, !couple && styles.startDisabled]}
+            onPress={onStart}
+            disabled={!couple}
+          >
+            <Text style={styles.startIcon}>🕊</Text>
+            <Text style={styles.focalStatement}>서운했던 마음,{'\n'}정리해서 전해볼까요?</Text>
+            <Text style={styles.startCta}>탭하여 맺음 시작</Text>
           </Pressable>
-        </View>
-      ) : needsRelationshipSetup ? (
-        <Pressable style={styles.startButton} onPress={onSetupRelationship}>
-          <Text style={styles.startIcon}>📝</Text>
-          <Text style={styles.startText}>관계 정보 입력하기</Text>
-          <Text style={styles.startHint}>
-            두 사람 이야기를 먼저 알려주면 더 정확한 질문을 받을 수 있어요
-          </Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          style={[styles.startButton, !couple && styles.startDisabled]}
-          onPress={onStart}
-          disabled={!couple}
-        >
-          <Text style={styles.startIcon}>🕊</Text>
-          <Text style={styles.startText}>맺음 시작</Text>
-          <Text style={styles.startHint}>
-            서운했던 마음, 정리해서 전해볼까요?
-          </Text>
-        </Pressable>
-      )}
+        )}
+      </View>
 
       <View style={styles.footerLinks}>
         <Pressable onPress={() => router.push('/(main)/history')}>
@@ -249,107 +251,67 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logo: { fontSize: 24, color: colors.ink, fontFamily: fonts.displayMedium },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  addPartnerButton: {
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: colors.purpleMid,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  addPartnerButtonText: { fontSize: 12, color: colors.purpleText, fontFamily: fonts.bodyMedium },
-  partnerScroll: { marginBottom: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  addPartnerLink: { fontSize: 13, color: colors.ink3, fontFamily: fonts.bodyMedium },
+  partnerScroll: { flexGrow: 0 },
   partnerScrollContent: { gap: 10, paddingRight: 4 },
   partnerChip: {
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'transparent',
     gap: 4,
     width: 68,
   },
-  partnerChipActive: {
-    borderColor: colors.purpleMid,
-    backgroundColor: colors.purpleTint,
-  },
+  partnerChipInactive: { opacity: 0.45 },
   partnerChipName: { fontSize: 11, color: colors.ink3, fontFamily: fonts.body },
-  partnerChipNameActive: { color: colors.purpleText, fontFamily: fonts.bodyMedium },
+  partnerChipNameActive: { color: colors.ink, fontFamily: fonts.bodyMedium },
+  partnerChipMark: { width: 24, height: 1.5, backgroundColor: 'transparent', marginTop: 2 },
+  partnerChipMarkActive: { backgroundColor: colors.ink },
   addPartnerChip: {
     width: 68,
     height: 68,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderStyle: 'dashed',
   },
   addPartnerIcon: { fontSize: 22, color: colors.ink3 },
-  coupleCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    paddingVertical: 22,
-    marginBottom: 16,
-  },
-  coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  heart: { fontSize: 16, color: colors.coralMid },
+  centerArea: { flex: 1, justifyContent: 'center' },
+  coupleBlock: { alignItems: 'center', marginBottom: 56, gap: 4 },
+  coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  heart: { fontSize: 15, color: colors.coralMid },
   coupleNames: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 14,
     color: colors.ink2,
     fontFamily: fonts.bodyMedium,
   },
-  pairCard: {
-    backgroundColor: colors.amberTint,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+  quietLink: {
+    ...ui.quietCta,
+    marginTop: 14,
   },
-  pairText: { color: colors.amberText, fontSize: 13, fontFamily: fonts.body },
-  resumeCard: {
-    backgroundColor: colors.purpleTint,
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 16,
+  focal: { alignItems: 'center', paddingHorizontal: 12 },
+  focalPress: { alignItems: 'center' },
+  focalStatement: {
+    ...ui.statement,
+    marginTop: 10,
+    marginBottom: 8,
   },
-  resumeLabel: { fontSize: 13, color: colors.purpleText, fontFamily: fonts.bodyMedium },
-  resumeStatus: {
-    fontSize: 20,
-    color: colors.ink,
-    marginTop: 6,
-    fontFamily: fonts.displayMedium,
+  startDisabled: { opacity: 0.4 },
+  startIcon: { fontSize: 36, marginBottom: 14 },
+  startCta: {
+    ...ui.quietCta,
+    marginTop: 18,
   },
-  resumeCta: { fontSize: 13, color: colors.purpleText, marginTop: 12, fontFamily: fonts.body },
   resumeDelete: {
     fontSize: 12,
     color: colors.ink3,
-    marginTop: 14,
+    marginTop: 20,
     textDecorationLine: 'underline',
     fontFamily: fonts.body,
   },
-  startButton: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    paddingVertical: 36,
-    marginBottom: 16,
-  },
-  startDisabled: { opacity: 0.5 },
-  startIcon: { fontSize: 34, marginBottom: 8 },
-  startText: { fontSize: 20, color: colors.ink, fontFamily: fonts.displayMedium },
-  startHint: { fontSize: 13, color: colors.ink3, marginTop: 6, fontFamily: fonts.body },
   footerLinks: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 'auto',
     marginBottom: 24,
   },
   footerLink: { fontSize: 13, color: colors.ink3, fontFamily: fonts.body },

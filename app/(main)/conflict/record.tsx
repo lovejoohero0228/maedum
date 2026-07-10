@@ -79,7 +79,7 @@ export default function Record() {
       <View style={styles.container}>
         {header}
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.purpleMid} />
+          <ActivityIndicator size="small" color={colors.ink3} />
         </View>
       </View>
     );
@@ -116,10 +116,10 @@ export default function Record() {
   const mindsets = allMindsets.filter((m) => !!m.text);
 
   const tabs = [
-    { key: 'received', label: '💌 받은 편지' },
-    { key: 'sent', label: '✉️ 보낸 편지' },
-    { key: 'analysis', label: '🔍 분석' },
-    { key: 'mission', label: '🧭 미션' },
+    { key: 'received', label: '받은 편지' },
+    { key: 'sent', label: '보낸 편지' },
+    { key: 'analysis', label: '분석' },
+    { key: 'mission', label: '미션' },
   ] as const;
 
   return (
@@ -140,7 +140,7 @@ export default function Record() {
         {tab === 'received' ? (
           receivedLetter ? (
             <>
-              <Text style={styles.sectionTitle}>💌 {partnerName}의 편지</Text>
+              <Text style={styles.sectionTitle}>{partnerName}의 편지</Text>
               <LetterCard
                 title={`${partnerName}의 편지`}
                 body={receivedLetter}
@@ -155,7 +155,7 @@ export default function Record() {
         {tab === 'sent' ? (
           sentLetter ? (
             <>
-              <Text style={styles.sectionTitle}>✉️ 내가 보낸 편지</Text>
+              <Text style={styles.sectionTitle}>내가 보낸 편지</Text>
               <LetterCard
                 title={`내가 ${partnerName}에게 보낸 편지`}
                 body={sentLetter}
@@ -169,7 +169,7 @@ export default function Record() {
 
         {tab === 'analysis' ? (
           <>
-            <Text style={styles.sectionTitle}>🔍 함께 본 분석</Text>
+            <Text style={styles.sectionTitle}>함께 본 분석</Text>
 
             {analysis.timing?.person_a && analysis.timing?.person_b ? (
               <AnalysisCard icon="🕐" title="마음이 상한 시점이 달라요">
@@ -209,14 +209,14 @@ export default function Record() {
         {tab === 'mission' ? (
           regenerating ? (
             <View style={styles.regenBox}>
-              <ActivityIndicator size="small" color={colors.purpleMid} />
+              <ActivityIndicator size="small" color={colors.ink3} />
               <Text style={styles.tabEmpty}>미션 페이퍼를 새 버전으로 다시 만드는 중…</Text>
             </View>
           ) : (
           <>
             {mindsets.length ? (
               <>
-                <Text style={styles.sectionTitle}>🧭 대화 전 마음가짐</Text>
+                <Text style={styles.sectionTitle}>대화 전 마음가짐</Text>
                 <View style={styles.mindsetCard}>
                   {mindsets.map((m, i) => (
                     <View
@@ -235,7 +235,7 @@ export default function Record() {
 
             {outputs.mission_a?.length || outputs.mission_b?.length ? (
               <>
-                <Text style={styles.sectionTitle}>✉️ 미션 페이퍼</Text>
+                <Text style={styles.sectionTitle}>미션 페이퍼</Text>
                 <MissionPaper
                   nameA={nameA}
                   nameB={nameB}
@@ -294,15 +294,19 @@ const styles = StyleSheet.create({
   scroll: { padding: 20, paddingBottom: 40 },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: colors.line2,
-    borderRadius: 12,
-    padding: 3,
-    gap: 3,
+    justifyContent: 'center',
+    gap: 22,
     marginHorizontal: 20,
+    marginTop: 6,
   },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  tabActive: { backgroundColor: colors.bgCard },
-  tabText: { fontSize: 12, color: colors.ink3, fontFamily: fonts.bodyMedium },
+  tab: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+    alignItems: 'center',
+  },
+  tabActive: { borderBottomColor: colors.ink },
+  tabText: { fontSize: 13, color: colors.ink3, fontFamily: fonts.bodyMedium },
   tabTextActive: { color: colors.ink },
   tabEmpty: {
     textAlign: 'center',
@@ -313,18 +317,17 @@ const styles = StyleSheet.create({
   },
   regenBox: { alignItems: 'center', gap: 4, marginTop: 20 },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    marginTop: 16,
-    marginBottom: 6,
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 10,
   },
   mindsetCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingTop: 14,
   },
   mindsetItem: { borderRadius: 12, padding: 12, marginBottom: 8 },
   mindsetName: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 4 },

@@ -1,4 +1,4 @@
-// 미션 페이퍼 (AGENT.md §7-4) — 두 컬럼 그리드, 유형별 아이콘
+// 미션 페이퍼 (AGENT.md §7-4) — 틴트 박스 대신 사용자 색 상단 룰이 있는 두 컬럼
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
 import { missionIcon } from '@/services/missionService';
@@ -13,7 +13,7 @@ interface MissionColumnProps {
 function MissionColumn({ name, color, missions }: MissionColumnProps) {
   const theme = userTheme(color);
   return (
-    <View style={[styles.column, { backgroundColor: theme.tint }]}>
+    <View style={[styles.column, { borderTopColor: theme.mid }]}>
       <Text style={[styles.columnTitle, { color: theme.text }]}>{name}의 미션</Text>
       {missions.map((m, i) => (
         <View key={i} style={styles.item}>
@@ -51,28 +51,29 @@ export function MissionPaper({
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', gap: 10, marginVertical: 8 },
+  grid: { flexDirection: 'row', gap: 20, marginVertical: 10 },
   column: {
     flex: 1,
-    borderRadius: 16,
-    padding: 14,
+    borderTopWidth: 2,
+    paddingTop: 12,
   },
   columnTitle: {
     fontSize: 13,
+    letterSpacing: 1,
     fontFamily: fonts.bodyMedium,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
-    marginBottom: 10,
+    gap: 7,
+    marginBottom: 12,
   },
-  itemIcon: { fontSize: 14, marginTop: 1 },
+  itemIcon: { fontSize: 13, marginTop: 2 },
   itemText: {
     flex: 1,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 21,
     color: colors.ink,
     fontFamily: fonts.body,
   },

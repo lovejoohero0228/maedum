@@ -1,4 +1,4 @@
-// 사용자 메시지 버블 — 사용자 색상(blue/coral) 테마
+// 사용자 메시지 — 사용자 색상(blue/coral)의 낮은 채도 틴트 시트
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -22,18 +22,19 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginVertical: 6,
+    marginVertical: 8,
     paddingLeft: 48,
   },
   bubble: {
-    borderRadius: 14,
-    borderTopRightRadius: 4,
-    padding: 12,
+    borderRadius: 18,
+    borderBottomRightRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     maxWidth: '100%',
   },
   text: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
     fontFamily: fonts.body,
   },
 });

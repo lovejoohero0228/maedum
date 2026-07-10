@@ -8,7 +8,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { restartFromField } from '@/services/aiInputService';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts } from '@/constants/colors';
+import { colors, ui } from '@/constants/colors';
 import { FIELD_ORDER, type Conflict } from '@/lib/types';
 
 export default function Waiting() {
@@ -84,7 +84,7 @@ export default function Waiting() {
     <View style={styles.container}>
       <ProgressSteps current={isProcessing ? 3 : 2} />
       <View style={styles.body}>
-        <ActivityIndicator size="large" color={colors.purpleMid} />
+        <Text style={styles.mark}>{isProcessing ? '✒' : '🕊'}</Text>
         <Text style={styles.title}>
           {isProcessing
             ? 'AI가 두 사람의 편지를 쓰고 있어요'
@@ -95,6 +95,7 @@ export default function Waiting() {
             ? '날것의 감정을 전달 가능한 언어로 바꾸는 중이에요.\n잠시만 기다려주세요.'
             : '상대도 지금 속마음을 정리하고 있어요.\n둘 다 완료되면 편지가 도착해요.'}
         </Text>
+        <ActivityIndicator size="small" color={colors.ink3} style={styles.spinner} />
         {!isProcessing ? (
           <Pressable onPress={onRestart} disabled={restarting} style={styles.restartButton}>
             <Text style={styles.restartText}>
@@ -113,31 +114,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
   },
+  mark: { fontSize: 30, marginBottom: 26, color: colors.ink },
   title: {
-    fontSize: 19,
-    color: colors.ink,
-    textAlign: 'center',
-    marginTop: 24,
-    fontFamily: fonts.displayMedium,
+    ...ui.statement,
+    fontSize: 20,
+    lineHeight: 31,
   },
   desc: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.ink3,
-    textAlign: 'center',
-    marginTop: 12,
-    fontFamily: fonts.body,
+    ...ui.statementSub,
+    marginTop: 14,
   },
+  spinner: { marginTop: 30, opacity: 0.7 },
   restartButton: {
-    marginTop: 28,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: colors.bgCard,
+    ...ui.pill,
+    marginTop: 34,
   },
-  restartText: { fontSize: 13, color: colors.ink2, fontFamily: fonts.bodyMedium },
+  restartText: { ...ui.pillText, fontSize: 13, color: colors.ink2 },
 });

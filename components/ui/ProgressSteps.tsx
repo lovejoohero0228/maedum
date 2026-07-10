@@ -1,6 +1,7 @@
-// 플로우 진행 단계 표시 (01 시작 → 02 입력 → 03 편지 → 04 미션)
+// 플로우 진행 표시 (01 시작 → 02 입력 → 03 편지 → 04 미션)
+// 레퍼런스의 상단 얇은 진행 바 + 현재 단계의 조용한 레터스페이스 라벨
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 
 const STEPS = ['시작', '입력', '편지', '미션'];
 
@@ -9,65 +10,28 @@ interface ProgressStepsProps {
 }
 
 export function ProgressSteps({ current }: ProgressStepsProps) {
+  const step = Math.max(1, Math.min(STEPS.length, current));
+  const pct = (step / STEPS.length) * 100;
   return (
-    <View style={styles.row}>
-      {STEPS.map((label, i) => {
-        const stepNum = i + 1;
-        const active = stepNum === current;
-        const done = stepNum < current;
-        return (
-          <View key={label} style={styles.step}>
-            <View
-              style={[
-                styles.dot,
-                done && styles.dotDone,
-                active && styles.dotActive,
-              ]}
-            >
-              <Text style={[styles.dotText, (done || active) && styles.dotTextOn]}>
-                {done ? '✓' : stepNum}
-              </Text>
-            </View>
-            <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-            {i < STEPS.length - 1 ? <View style={styles.bar} /> : null}
-          </View>
-        );
-      })}
+    <View style={styles.wrap}>
+      <View style={ui.progressTrack}>
+        <View style={[ui.progressFill, { width: `${pct}%` }]} />
+      </View>
+      <Text style={styles.label}>{STEPS[step - 1]}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
+  wrap: {
+    paddingVertical: 10,
+    gap: 8,
   },
-  step: { flexDirection: 'row', alignItems: 'center' },
-  dot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.line2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotDone: { backgroundColor: colors.tealMid },
-  dotActive: { backgroundColor: colors.purpleMid },
-  dotText: { fontSize: 11, color: colors.ink3, fontFamily: fonts.bodyMedium },
-  dotTextOn: { color: '#fff' },
   label: {
     fontSize: 11,
+    letterSpacing: 3,
     color: colors.ink3,
-    marginLeft: 4,
-    fontFamily: fonts.body,
-  },
-  labelActive: { color: colors.purpleText, fontFamily: fonts.bodyMedium },
-  bar: {
-    width: 16,
-    height: 1,
-    backgroundColor: colors.line,
-    marginHorizontal: 6,
+    textAlign: 'center',
+    fontFamily: fonts.bodyMedium,
   },
 });

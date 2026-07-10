@@ -19,7 +19,7 @@ import { requestHistoryUpdate } from '@/lib/ai';
 import { MissionPaper } from '@/components/mission/MissionPaper';
 import { ConvoGuide } from '@/components/mission/ConvoGuide';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, fonts, userTheme } from '@/constants/colors';
+import { colors, fonts, ui, userTheme } from '@/constants/colors';
 
 export default function Mission() {
   const session = useConflictStore((s) => s.session);
@@ -115,8 +115,9 @@ export default function Mission() {
       <View style={[styles.container, styles.loading]}>
         <ProgressSteps current={4} />
         <View style={styles.loadingBody}>
-          <ActivityIndicator size="large" color={colors.purpleMid} />
+          <Text style={styles.loadingMark}>🧭</Text>
           <Text style={styles.loadingText}>미션 페이퍼를 준비하고 있어요…</Text>
+          <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
         </View>
       </View>
     );
@@ -135,14 +136,14 @@ export default function Mission() {
     <View style={styles.container}>
       <ProgressSteps current={4} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>✉️ 우리의 미션 페이퍼</Text>
+        <Text style={styles.title}>우리의 미션 페이퍼</Text>
         <Text style={styles.hint}>
           과제가 아니라 제안이에요. 할 수 있는 것부터, 천천히.
         </Text>
 
         {mindsets.length ? (
           <View style={styles.mindsetCard}>
-            <Text style={styles.mindsetTitle}>🧭 대화 전, 마음에 새겨요</Text>
+            <Text style={styles.mindsetTitle}>대화 전, 마음에 새겨요</Text>
             {mindsets.map((m, i) => (
               <View
                 key={i}
@@ -200,61 +201,53 @@ export default function Mission() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   loading: {},
-  loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: colors.ink3,
-    fontFamily: fonts.body,
-  },
-  scroll: { padding: 20, paddingBottom: 40 },
+  loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  loadingMark: { fontSize: 30, marginBottom: 18 },
+  loadingText: { ...ui.statementSub },
+  loadingSpinner: { marginTop: 22, opacity: 0.7 },
+  scroll: { padding: 24, paddingBottom: 48 },
   title: {
-    fontSize: 20,
-    color: colors.ink,
-    fontFamily: fonts.displayMedium,
-    marginTop: 8,
+    ...ui.statement,
+    fontSize: 21,
+    marginTop: 12,
   },
   hint: {
+    ...ui.statementSub,
     fontSize: 13,
-    color: colors.ink3,
-    marginTop: 4,
-    marginBottom: 12,
-    fontFamily: fonts.body,
+    marginTop: 6,
+    marginBottom: 24,
   },
   mindsetCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingTop: 18,
     marginVertical: 8,
   },
   mindsetTitle: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.ink,
-    fontFamily: fonts.bodyMedium,
-    marginBottom: 10,
+    fontFamily: fonts.displayMedium,
+    textAlign: 'center',
+    marginBottom: 14,
   },
-  mindsetItem: { borderRadius: 12, padding: 12, marginBottom: 8 },
+  mindsetItem: { borderRadius: 14, padding: 14, marginBottom: 8 },
   mindsetName: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 4 },
   mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },
   doneButton: {
-    backgroundColor: colors.tealMid,
-    borderRadius: 14,
-    paddingVertical: 15,
+    ...ui.primaryPill,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 28,
   },
   doneDisabled: { opacity: 0.55 },
-  doneText: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyMedium },
+  doneText: { ...ui.primaryPillText },
   doneHint: {
     textAlign: 'center',
     fontSize: 12,
     color: colors.ink3,
-    marginTop: 10,
+    marginTop: 12,
     fontFamily: fonts.body,
   },
-  regenButton: { alignItems: 'center', marginTop: 16, padding: 8 },
+  regenButton: { alignItems: 'center', marginTop: 18, padding: 8 },
   regenText: {
     fontSize: 12,
     color: colors.ink3,

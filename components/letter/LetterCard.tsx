@@ -1,4 +1,4 @@
-// 편지 카드 — 세리프 본문, 발신자 색상 테두리
+// 편지 — 종이 위의 편지처럼: 세리프 본문, 헤어라인 룰, 발신자 색은 작은 라벨로만
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
 
@@ -11,30 +11,39 @@ interface LetterCardProps {
 export function LetterCard({ title, body, senderColor }: LetterCardProps) {
   const theme = userTheme(senderColor);
   return (
-    <View style={[styles.card, { borderColor: theme.mid }]}>
+    <View style={styles.sheet}>
       <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+      <View style={styles.rule} />
       <Text style={styles.body}>{body}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  sheet: {
     backgroundColor: colors.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderLeftWidth: 4,
-    padding: 18,
-    marginVertical: 8,
+    borderRadius: 4,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    marginVertical: 10,
   },
   title: {
-    fontSize: 13,
+    fontSize: 12,
+    letterSpacing: 2,
     fontFamily: fonts.bodyMedium,
-    marginBottom: 10,
+    textAlign: 'center',
+  },
+  rule: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.line,
+    marginTop: 14,
+    marginBottom: 20,
+    alignSelf: 'center',
+    width: 48,
   },
   body: {
-    fontSize: 15,
-    lineHeight: 26,
+    fontSize: 16,
+    lineHeight: 30,
     color: colors.ink,
     fontFamily: fonts.display,
   },

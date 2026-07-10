@@ -5,7 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { listConflicts } from '@/services/conflictService';
 import { requestHistoryUpdate } from '@/lib/ai';
-import { colors, fonts } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 import type { Conflict } from '@/lib/types';
 
 export default function History() {
@@ -68,7 +68,6 @@ export default function History() {
               >
                 {item.status === 'resolved' ? '✓ 맺음 완료' : '진행 중'}
               </Text>
-              <Text style={styles.chevron}>›</Text>
             </Pressable>
           );
         }}
@@ -88,30 +87,23 @@ const styles = StyleSheet.create({
   },
   back: { fontSize: 22, color: colors.ink2 },
   title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
-  list: { padding: 20, paddingTop: 8 },
+  list: { paddingHorizontal: 28, paddingTop: 24, paddingBottom: 40 },
   empty: {
-    textAlign: 'center',
-    color: colors.ink3,
-    fontSize: 14,
-    marginTop: 60,
-    fontFamily: fonts.body,
+    ...ui.statementSub,
+    marginTop: 80,
   },
   item: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 16,
-    marginBottom: 10,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   itemBody: { flex: 1, marginRight: 10 },
-  itemTitle: { fontSize: 15, color: colors.ink, fontFamily: fonts.bodyMedium },
-  itemDate: { fontSize: 12, color: colors.ink3, marginTop: 3, fontFamily: fonts.body },
-  itemStatus: { fontSize: 13, fontFamily: fonts.bodyMedium },
-  chevron: { fontSize: 20, color: colors.ink3, marginLeft: 8 },
+  itemTitle: { fontSize: 16, color: colors.ink, fontFamily: fonts.displayMedium },
+  itemDate: { fontSize: 12, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
+  itemStatus: { fontSize: 12, fontFamily: fonts.bodyMedium, letterSpacing: 1 },
   resolved: { color: colors.tealText },
-  ongoing: { color: colors.purpleText },
+  ongoing: { color: colors.ink3 },
 });

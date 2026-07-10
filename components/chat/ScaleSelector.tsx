@@ -25,10 +25,7 @@ export function ScaleSelector({ choices, selectedValue, onSelect, color }: Scale
             <Pressable
               key={choice}
               onPress={() => onSelect(choice)}
-              style={[
-                styles.cell,
-                isSelected && { backgroundColor: theme.mid, borderColor: theme.mid },
-              ]}
+              style={[styles.cell, isSelected && styles.cellSelected]}
               hitSlop={2}
             >
               <Text style={[styles.cellText, isSelected && styles.cellTextSelected]}>
@@ -46,25 +43,24 @@ export function ScaleSelector({ choices, selectedValue, onSelect, color }: Scale
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginVertical: 8, paddingLeft: 36, gap: 6 },
+  wrap: { marginVertical: 10, paddingLeft: 23, gap: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   cell: {
-    minWidth: 34,
-    height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.line,
+    minWidth: 36,
+    height: 36,
+    borderRadius: 100,
     backgroundColor: colors.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
+  cellSelected: { backgroundColor: colors.ink },
   cellText: {
     fontSize: 14,
-    color: colors.ink2,
+    color: colors.ink,
     fontFamily: fonts.bodyMedium,
   },
-  cellTextSelected: { color: '#fff' },
+  cellTextSelected: { color: colors.bg },
   desc: {
     fontSize: 13,
     color: colors.ink3,
