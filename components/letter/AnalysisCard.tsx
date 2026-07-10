@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '@/constants/colors';
 
 interface AnalysisCardProps {
-  icon: string;    // 예: "🕐" "🌡" "🤝"
+  icon: string;    // 모노크롬 글리프 — 예: "◷" "△" "✦"
   title: string;   // 섹션 제목
   children: React.ReactNode;
 }
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 8,
   },
-  icon: { fontSize: 14 },
+  icon: { fontSize: 13, color: colors.ink2 },
   title: {
     fontSize: 16,
     color: colors.ink,

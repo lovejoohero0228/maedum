@@ -125,7 +125,7 @@ export default function Letter() {
   if (!outputs || !couple || !session) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <Text style={styles.loadingMark}>💌</Text>
+        <Text style={styles.loadingMark}>❦</Text>
         <Text style={styles.loadingText}>편지를 불러오는 중…</Text>
         <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
       </View>
@@ -211,7 +211,7 @@ export default function Letter() {
         {/* 내부 필드까지 확인하고 렌더 — AI 응답의 스키마 드리프트로 person_a 등이 빠져 있으면
             undefined 접근으로 화면 전체가 죽어(흰 화면) 버리므로 카드 단위로 건너뛴다 */}
         {analysis.timing?.person_a && analysis.timing?.person_b ? (
-          <AnalysisCard icon="🕐" title="마음이 상한 시점이 달라요">
+          <AnalysisCard icon="◷" title="마음이 상한 시점이 달라요">
             <AnalysisText>
               {analysis.timing.person_a.name}: {analysis.timing.person_a.when} —{' '}
               {analysis.timing.person_a.why}
@@ -225,14 +225,14 @@ export default function Letter() {
         ) : null}
 
         {analysis.temperature ? (
-          <AnalysisCard icon="🌡" title="온도가 달랐던 이유">
+          <AnalysisCard icon="△" title="온도가 달랐던 이유">
             <AnalysisText>{analysis.temperature.scale_diff_explanation}</AnalysisText>
             <AnalysisText>{analysis.temperature.main_text}</AnalysisText>
           </AnalysisCard>
         ) : null}
 
         {analysis.understanding ? (
-          <AnalysisCard icon="🤝" title="이미 서로 이해하고 있어요">
+          <AnalysisCard icon="✦" title="이미 서로 이해하고 있어요">
             <AnalysisText>{analysis.understanding.a_understands_b}</AnalysisText>
             <AnalysisText>{analysis.understanding.b_understands_a}</AnalysisText>
             <AnalysisText>{analysis.understanding.bridge_text}</AnalysisText>
@@ -261,9 +261,9 @@ export default function Letter() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   loading: { alignItems: 'center', justifyContent: 'center' },
-  loadingMark: { fontSize: 30, marginBottom: 18 },
+  loadingMark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
   loadingText: { ...ui.statementSub },
-  loadingSpinner: { marginTop: 22, opacity: 0.7 },
+  loadingSpinner: { marginTop: 28, opacity: 0.7 },
   letterTabs: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -118,7 +118,7 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 28 },
+  container: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 24 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -173,5 +173,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   logout: { marginTop: 'auto', marginBottom: 48, alignItems: 'center' },
-  logoutText: { ...ui.quietCta, letterSpacing: 2, color: colors.coralText },
+  logoutText: { ...ui.quietCta },
 });

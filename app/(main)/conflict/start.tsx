@@ -54,7 +54,7 @@ export default function Start() {
       <ProgressSteps current={1} />
 
       <View style={styles.body}>
-        <Text style={styles.icon}>🕊</Text>
+        <Text style={styles.icon}>❦</Text>
         <Text style={styles.title}>
           {partnerInitiated
             ? `${partner?.display_name ?? '상대'}가 기다리고 있어요`
@@ -86,9 +86,9 @@ export default function Start() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, padding: 28, paddingTop: 56 },
+  container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 56 },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  icon: { fontSize: 30, marginBottom: 22 },
+  icon: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
   title: {
     ...ui.statement,
     marginBottom: 16,

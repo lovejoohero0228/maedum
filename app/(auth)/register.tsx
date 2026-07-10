@@ -95,11 +95,10 @@ export default function Register() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 36 },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   hero: { alignItems: 'center', marginBottom: 48 },
   title: {
     ...ui.statement,
-    fontSize: 26,
   },
   subtitle: {
     ...ui.statementSub,

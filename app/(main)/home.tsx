@@ -210,7 +210,7 @@ export default function Home() {
           </View>
         ) : needsRelationshipSetup ? (
           <Pressable style={styles.focal} onPress={onSetupRelationship}>
-            <Text style={styles.startIcon}>📝</Text>
+            <Text style={styles.startIcon}>✦</Text>
             <Text style={styles.focalStatement}>관계 정보 입력하기</Text>
             <Text style={ui.statementSub}>
               두 사람 이야기를 먼저 알려주면{'\n'}더 정확한 질문을 받을 수 있어요
@@ -222,7 +222,7 @@ export default function Home() {
             onPress={onStart}
             disabled={!couple}
           >
-            <Text style={styles.startIcon}>🕊</Text>
+            <Text style={styles.startIcon}>❦</Text>
             <Text style={styles.focalStatement}>서운했던 마음,{'\n'}정리해서 전해볼까요?</Text>
             <Text style={styles.startCta}>탭하여 맺음 시작</Text>
           </Pressable>
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   centerArea: { flex: 1, justifyContent: 'center' },
   coupleBlock: { alignItems: 'center', marginBottom: 56, gap: 4 },
   coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  heart: { fontSize: 15, color: colors.coralMid },
+  heart: { fontSize: 14, color: colors.ink3 },
   coupleNames: {
     marginTop: 12,
     fontSize: 14,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   startDisabled: { opacity: 0.4 },
-  startIcon: { fontSize: 36, marginBottom: 14 },
+  startIcon: { fontSize: 28, color: colors.ink2, marginBottom: 14 },
   startCta: {
     ...ui.quietCta,
     marginTop: 18,

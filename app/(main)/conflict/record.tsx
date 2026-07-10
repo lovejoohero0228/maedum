@@ -172,7 +172,7 @@ export default function Record() {
             <Text style={styles.sectionTitle}>함께 본 분석</Text>
 
             {analysis.timing?.person_a && analysis.timing?.person_b ? (
-              <AnalysisCard icon="🕐" title="마음이 상한 시점이 달라요">
+              <AnalysisCard icon="◷" title="마음이 상한 시점이 달라요">
                 <AnalysisText>
                   {analysis.timing.person_a.name}: {analysis.timing.person_a.when} —{' '}
                   {analysis.timing.person_a.why}
@@ -186,14 +186,14 @@ export default function Record() {
             ) : null}
 
             {analysis.temperature ? (
-              <AnalysisCard icon="🌡" title="온도가 달랐던 이유">
+              <AnalysisCard icon="△" title="온도가 달랐던 이유">
                 <AnalysisText>{analysis.temperature.scale_diff_explanation}</AnalysisText>
                 <AnalysisText>{analysis.temperature.main_text}</AnalysisText>
               </AnalysisCard>
             ) : null}
 
             {analysis.understanding ? (
-              <AnalysisCard icon="🤝" title="이미 서로 이해하고 있어요">
+              <AnalysisCard icon="✦" title="이미 서로 이해하고 있어요">
                 <AnalysisText>{analysis.understanding.a_understands_b}</AnalysisText>
                 <AnalysisText>{analysis.understanding.b_understands_a}</AnalysisText>
                 <AnalysisText>{analysis.understanding.bridge_text}</AnalysisText>
@@ -221,7 +221,7 @@ export default function Record() {
                   {mindsets.map((m, i) => (
                     <View
                       key={i}
-                      style={[styles.mindsetItem, { backgroundColor: userTheme(m.color).tint }]}
+                      style={[styles.mindsetItem, { borderLeftColor: userTheme(m.color).mid }]}
                     >
                       <Text style={[styles.mindsetName, { color: userTheme(m.color).text }]}>
                         {m.name}
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     marginBottom: 8,
     gap: 12,
   },
@@ -291,12 +291,12 @@ const styles = StyleSheet.create({
     color: colors.ink3,
     fontFamily: fonts.body,
   },
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 24, paddingBottom: 48 },
   tabs: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 22,
-    marginHorizontal: 20,
+    gap: 28,
+    marginHorizontal: 24,
     marginTop: 6,
   },
   tab: {
@@ -329,7 +329,12 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
     paddingTop: 14,
   },
-  mindsetItem: { borderRadius: 12, padding: 12, marginBottom: 8 },
-  mindsetName: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 4 },
+  mindsetItem: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2, marginBottom: 14 },
+  mindsetName: {
+    fontSize: 12,
+    fontFamily: fonts.bodyMedium,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
   mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },
 });

@@ -81,7 +81,7 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 36 },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   hero: { alignItems: 'center', marginBottom: 56 },
   mark: { fontSize: 26, color: colors.ink, marginBottom: 14 },
   logo: {

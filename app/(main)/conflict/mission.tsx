@@ -115,7 +115,7 @@ export default function Mission() {
       <View style={[styles.container, styles.loading]}>
         <ProgressSteps current={4} />
         <View style={styles.loadingBody}>
-          <Text style={styles.loadingMark}>🧭</Text>
+          <Text style={styles.loadingMark}>❦</Text>
           <Text style={styles.loadingText}>미션 페이퍼를 준비하고 있어요…</Text>
           <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
         </View>
@@ -147,7 +147,7 @@ export default function Mission() {
             {mindsets.map((m, i) => (
               <View
                 key={i}
-                style={[styles.mindsetItem, { backgroundColor: userTheme(m.color).tint }]}
+                style={[styles.mindsetItem, { borderLeftColor: userTheme(m.color).mid }]}
               >
                 <Text style={[styles.mindsetName, { color: userTheme(m.color).text }]}>
                   {m.name}
@@ -202,9 +202,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   loading: {},
   loadingBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  loadingMark: { fontSize: 30, marginBottom: 18 },
+  loadingMark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
   loadingText: { ...ui.statementSub },
-  loadingSpinner: { marginTop: 22, opacity: 0.7 },
+  loadingSpinner: { marginTop: 28, opacity: 0.7 },
   scroll: { padding: 24, paddingBottom: 48 },
   title: {
     ...ui.statement,
@@ -230,8 +230,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 14,
   },
-  mindsetItem: { borderRadius: 14, padding: 14, marginBottom: 8 },
-  mindsetName: { fontSize: 12, fontFamily: fonts.bodyMedium, marginBottom: 4 },
+  mindsetItem: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2, marginBottom: 14 },
+  mindsetName: {
+    fontSize: 12,
+    fontFamily: fonts.bodyMedium,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
   mindsetText: { fontSize: 14, lineHeight: 21, color: colors.ink2, fontFamily: fonts.body },
   doneButton: {
     ...ui.primaryPill,

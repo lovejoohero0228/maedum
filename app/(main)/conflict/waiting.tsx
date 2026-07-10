@@ -8,7 +8,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
 import { restartFromField } from '@/services/aiInputService';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
-import { colors, ui } from '@/constants/colors';
+import { colors, fonts, ui } from '@/constants/colors';
 import { FIELD_ORDER, type Conflict } from '@/lib/types';
 
 export default function Waiting() {
@@ -84,7 +84,7 @@ export default function Waiting() {
     <View style={styles.container}>
       <ProgressSteps current={isProcessing ? 3 : 2} />
       <View style={styles.body}>
-        <Text style={styles.mark}>{isProcessing ? '✒' : '🕊'}</Text>
+        <Text style={styles.mark}>{isProcessing ? '✒' : '❦'}</Text>
         <Text style={styles.title}>
           {isProcessing
             ? 'AI가 두 사람의 편지를 쓰고 있어요'
@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 24,
   },
-  mark: { fontSize: 30, marginBottom: 26, color: colors.ink },
+  mark: { fontSize: 28, marginBottom: 24, color: colors.ink2, fontFamily: fonts.display },
   title: {
     ...ui.statement,
     fontSize: 20,

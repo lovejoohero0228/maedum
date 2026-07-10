@@ -147,8 +147,8 @@ export default function Pair() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 28, paddingTop: 120, paddingBottom: 48, alignItems: 'center' },
-  title: { ...ui.statement, fontSize: 24, lineHeight: 36 },
+  content: { paddingHorizontal: 24, paddingTop: 120, paddingBottom: 48, alignItems: 'center' },
+  title: { ...ui.statement },
   subtitle: {
     ...ui.statementSub,
     marginTop: 12,
@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
   },
   logout: {
     ...ui.quietCta,
-    letterSpacing: 2,
     marginTop: 64,
   },
 });

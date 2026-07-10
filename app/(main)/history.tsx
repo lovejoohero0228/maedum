@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     marginBottom: 12,
   },
   back: { fontSize: 22, color: colors.ink2 },
   title: { fontSize: 18, color: colors.ink, fontFamily: fonts.displayMedium },
-  list: { paddingHorizontal: 28, paddingTop: 24, paddingBottom: 40 },
+  list: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
   empty: {
     ...ui.statementSub,
     marginTop: 80,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   itemBody: { flex: 1, marginRight: 10 },
   itemTitle: { fontSize: 16, color: colors.ink, fontFamily: fonts.displayMedium },
   itemDate: { fontSize: 12, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
-  itemStatus: { fontSize: 12, fontFamily: fonts.bodyMedium, letterSpacing: 1 },
+  itemStatus: { fontSize: 12, fontFamily: fonts.bodyMedium, letterSpacing: 2 },
   resolved: { color: colors.tealText },
   ongoing: { color: colors.ink3 },
 });

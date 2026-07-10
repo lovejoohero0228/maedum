@@ -1,8 +1,17 @@
 // 미션 페이퍼 (AGENT.md §7-4) — 틴트 박스 대신 사용자 색 상단 룰이 있는 두 컬럼
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, userTheme, type UserColor } from '@/constants/colors';
-import { missionIcon } from '@/services/missionService';
 import type { MissionItem } from '@/lib/types';
+
+// 컬러 이모지 대신 잉크 톤 모노크롬 글리프 (Find Your Faith 그래머)
+const missionGlyph: Record<MissionItem['type'], string> = {
+  prevent: '✧',
+  differently: '❖',
+  empathy: '☙',
+  habit: '◦',
+  acknowledge: '✦',
+  action: '➔',
+};
 
 interface MissionColumnProps {
   name: string;
@@ -17,7 +26,7 @@ function MissionColumn({ name, color, missions }: MissionColumnProps) {
       <Text style={[styles.columnTitle, { color: theme.text }]}>{name}의 미션</Text>
       {missions.map((m, i) => (
         <View key={i} style={styles.item}>
-          <Text style={styles.itemIcon}>{missionIcon[m.type] ?? '✦'}</Text>
+          <Text style={styles.itemIcon}>{missionGlyph[m.type] ?? '✦'}</Text>
           <Text style={styles.itemText}>{m.text}</Text>
         </View>
       ))}
@@ -69,7 +78,7 @@ const styles = StyleSheet.create({
     gap: 7,
     marginBottom: 12,
   },
-  itemIcon: { fontSize: 13, marginTop: 2 },
+  itemIcon: { fontSize: 13, marginTop: 2, color: colors.ink2 },
   itemText: {
     flex: 1,
     fontSize: 13,

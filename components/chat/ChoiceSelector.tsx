@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   direct: { paddingVertical: 6, paddingHorizontal: 4 },
   directText: {
     fontSize: 13,
-    letterSpacing: 1,
+    letterSpacing: 2,
     color: colors.ink3,
     fontFamily: fonts.bodyMedium,
   },
