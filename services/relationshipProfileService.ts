@@ -24,6 +24,8 @@ export interface RelationshipProfileInput {
   my_personality_tags: string[];
   partner_personality_tags: string[];
   frequent_conflict_topics: string[];
+  partner_nickname: string | null;
+  home_background: string | null;
   is_complete: boolean;
 }
 

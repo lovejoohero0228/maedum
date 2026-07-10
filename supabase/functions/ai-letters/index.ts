@@ -38,7 +38,7 @@ function inputSummary(row: InputRow, name: string, partnerName: string): string 
   return JSON.stringify(
     {
       작성자: name,
-      상대: partnerName,
+      "상대 호칭": partnerName,
       trigger_moment: row.trigger_moment,
       first_hurt_moment: row.first_hurt_moment,
       context_tags: row.context_tags,
@@ -111,6 +111,16 @@ Deno.serve(async (req) => {
     const profileA = profiles!.find((p) => p.id === couple.user_a_id)!;
     const profileB = profiles!.find((p) => p.id === couple.user_b_id)!;
 
+    // 발신자가 상대를 부르는 별칭 (관계 프로필) — 편지 서두 호칭에 사용, 없으면 상대 이름
+    const { data: rps } = await admin
+      .from("relationship_profiles")
+      .select("user_id, partner_nickname")
+      .eq("couple_id", conflict.couple_id);
+    const nicknameBy = (userId: string) =>
+      rps?.find((r) => r.user_id === userId)?.partner_nickname?.trim() || null;
+    const callBtoA = nicknameBy(couple.user_a_id) ?? profileB.display_name; // A가 B를 부르는 호칭
+    const callAtoB = nicknameBy(couple.user_b_id) ?? profileA.display_name; // B가 A를 부르는 호칭
+
     const openai = openaiClient();
 
     // 편지: 발신자 입력 → 수신자가 읽는 텍스트 (AGENT.md 스키마 주석: letter_a_to_b = A→B)
@@ -124,7 +134,7 @@ Deno.serve(async (req) => {
         max_tokens: 2048,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: `${receiverName}에게 전달할 편지를 작성해주세요.` },
+          { role: "user", content: "상대에게 전달할 편지를 작성해주세요." },
         ],
       });
       const text = res.choices[0]?.message?.content;
@@ -171,8 +181,8 @@ Deno.serve(async (req) => {
 
     // 세 호출은 서로 독립 — 병렬 실행
     const [letterAtoB, letterBtoA, analysis] = await Promise.all([
-      refineLetter(inputA, profileA.display_name, profileB.display_name),
-      refineLetter(inputB, profileB.display_name, profileA.display_name),
+      refineLetter(inputA, profileA.display_name, callBtoA),
+      refineLetter(inputB, profileB.display_name, callAtoB),
       generateAnalysis(),
     ]);
 

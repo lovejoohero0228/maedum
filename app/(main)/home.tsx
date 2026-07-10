@@ -11,6 +11,7 @@ import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, gradients, ui } from '@/constants/colors';
+import { parseHomeBackground } from '@/constants/homeBackgrounds';
 import type { Conflict, ConflictStatus } from '@/lib/types';
 
 // 상태 → 이어갈 화면 (AGENT.md §4 플로우)
@@ -123,9 +124,12 @@ export default function Home() {
     conflict && session && conflict.initiator_id !== session.user.id
     && conflict.status === 'waiting_partner';
 
+  // 관계 설정에서 고른 홈 배경 (프리셋 그라데이션 또는 업로드 이미지) — 활성 커플 기준
+  const homeBg = parseHomeBackground(relationshipProfile?.home_background);
+
   return (
     <View style={styles.container}>
-      <Wash />
+      <Wash colors={homeBg.colors} imageUrl={homeBg.imageUrl} height={homeBg.imageUrl ? 300 : 260} />
       <View style={styles.header}>
         <Text style={styles.logo}>맺음</Text>
         <View style={styles.headerRight}>

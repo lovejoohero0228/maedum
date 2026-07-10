@@ -100,6 +100,8 @@ export interface RelationshipProfile {
   my_personality_tags: string[];
   partner_personality_tags: string[];
   frequent_conflict_topics: string[];
+  partner_nickname: string | null;
+  home_background: string | null;
   reference_bank: ReferenceBank | null;
   reference_bank_generated_at: string | null;
   is_complete: boolean;
