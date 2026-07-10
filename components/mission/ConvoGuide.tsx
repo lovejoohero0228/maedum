@@ -44,7 +44,7 @@ export function ConvoGuide({ steps, note, nameA, nameB, colorA, colorB }: ConvoG
         ))}
       {note ? (
         <View style={styles.note}>
-          <Maedeubi size={22} />
+          <Maedeubi size={22} variant="comfort" />
           <Text style={styles.noteText}>{note}</Text>
         </View>
       ) : null}

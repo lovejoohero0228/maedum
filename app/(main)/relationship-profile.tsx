@@ -158,7 +158,7 @@ export default function RelationshipProfileScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Wash />
-        <Maedeubi size={88} breathe />
+        <Maedeubi size={88} breathe variant="think" />
         <Text style={styles.loadingText}>매듭이가 우리 관계에 맞는 질문지를 준비하고 있어요…</Text>
         <ActivityIndicator size="small" color={colors.ink2} style={{ marginTop: 20 }} />
       </View>

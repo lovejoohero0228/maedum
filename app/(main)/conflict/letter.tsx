@@ -129,7 +129,7 @@ export default function Letter() {
       <View style={[styles.container, styles.loading]}>
         <Wash variant="pink" />
         <View style={styles.loadingOrb}>
-          <Maedeubi size={96} breathe />
+          <Maedeubi size={96} breathe variant="letter" />
         </View>
         <Text style={styles.loadingText}>매듭이가 편지를 가져오는 중…</Text>
         <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />

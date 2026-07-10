@@ -90,7 +90,8 @@ export default function Waiting() {
       </View>
       <View style={styles.body}>
         <View style={styles.orb}>
-          <Maedeubi size={104} breathe />
+          {/* 편지 작성 중엔 실을 매듭짓는 매듭이, 상대를 기다릴 땐 실을 건네는 매듭이 */}
+          <Maedeubi size={104} breathe variant={isProcessing ? 'think' : 'comfort'} />
         </View>
         <Text style={styles.title}>
           {isProcessing

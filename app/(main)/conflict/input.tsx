@@ -446,7 +446,7 @@ export default function Input() {
 
         {waiting ? (
           <View style={styles.typing}>
-            <Maedeubi size={22} breathe />
+            <Maedeubi size={22} breathe variant="think" />
             <Text style={styles.typingText}>매듭이가 생각하는 중…</Text>
           </View>
         ) : null}

@@ -17,7 +17,9 @@ export function AIChatBubble({ message, flag, flagText, showName = true }: AICha
   return (
     <View style={styles.row}>
       {/* 연속 말풍선에서는 첫 번째에만 얼굴을 보여주고 자리는 유지한다 */}
-      <View style={styles.marker}>{showName ? <Maedeubi size={28} /> : null}</View>
+      <View style={styles.marker}>
+        {showName ? <Maedeubi size={28} variant="question" /> : null}
+      </View>
       <View style={styles.bubbleWrap}>
         {showName ? <Text style={styles.name}>매듭이</Text> : null}
         {flag ? <FlagBadge flag={flag} text={flagText} /> : null}

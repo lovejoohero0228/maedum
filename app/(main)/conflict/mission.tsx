@@ -125,7 +125,7 @@ export default function Mission() {
         </View>
         <View style={styles.loadingBody}>
           <View style={styles.loadingOrb}>
-            <Maedeubi size={104} breathe />
+            <Maedeubi size={104} breathe variant="think" />
           </View>
           <Text style={styles.loadingText}>매듭이가 미션 페이퍼를 준비하고 있어요…</Text>
           <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
@@ -150,10 +150,15 @@ export default function Mission() {
         <ProgressSteps current={4} />
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>우리의 미션 페이퍼</Text>
-        <Text style={styles.hint}>
-          과제가 아니라 제안이에요. 할 수 있는 것부터, 천천히.
-        </Text>
+        <View style={styles.titleRow}>
+          <View style={styles.titleBody}>
+            <Text style={styles.title}>우리의 미션 페이퍼</Text>
+            <Text style={styles.hint}>
+              과제가 아니라 제안이에요. 할 수 있는 것부터, 천천히.
+            </Text>
+          </View>
+          <Maedeubi size={56} variant="celebrate" />
+        </View>
 
         {mindsets.length ? (
           <View style={styles.mindsetCard}>
@@ -227,14 +232,20 @@ const styles = StyleSheet.create({
   loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
   scroll: { padding: 24, paddingBottom: 48 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  titleBody: { flex: 1 },
   title: {
     ...ui.statement,
-    marginTop: 12,
   },
   hint: {
     ...ui.statementSub,
     marginTop: 6,
-    marginBottom: 24,
   },
   mindsetCard: {
     ...ui.card,
