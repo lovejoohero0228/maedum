@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { listConflicts } from '@/services/conflictService';
 import { requestHistoryUpdate } from '@/lib/ai';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 import type { Conflict } from '@/lib/types';
@@ -37,7 +38,12 @@ export default function History() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>아직 기록이 없어요.</Text>
+          <View style={styles.emptyWrap}>
+            <Maedeubi size={64} />
+            <Text style={styles.empty}>
+              아직 기록이 없어요.{'\n'}첫 맺음을 지으면 매듭이가 여기 모아둘게요.
+            </Text>
+          </View>
         }
         renderItem={({ item }) => {
           const dateText = new Date(item.created_at).toLocaleDateString('ko-KR', {
@@ -91,9 +97,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   list: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
+  emptyWrap: { alignItems: 'center', marginTop: 64, gap: 16 },
   empty: {
     ...ui.statementSub,
-    marginTop: 80,
     textAlign: 'center',
   },
   item: {

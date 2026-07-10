@@ -157,7 +157,10 @@ export default function Mission() {
 
         {mindsets.length ? (
           <View style={styles.mindsetCard}>
-            <Text style={styles.mindsetTitle}>대화 전, 마음에 새겨요</Text>
+            <View style={styles.mindsetTitleRow}>
+              <Maedeubi size={22} />
+              <Text style={styles.mindsetTitle}>대화 전, 마음에 새겨요</Text>
+            </View>
             {mindsets.map((m, i) => (
               <View
                 key={i}
@@ -237,11 +240,16 @@ const styles = StyleSheet.create({
     ...ui.card,
     marginVertical: 8,
   },
+  mindsetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
   mindsetTitle: {
     fontSize: 17,
     color: colors.ink,
     fontFamily: fonts.displayMedium,
-    marginBottom: 14,
   },
   mindsetItem: { borderLeftWidth: 2, paddingLeft: 14, paddingVertical: 2, marginBottom: 14 },
   mindsetName: {

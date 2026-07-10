@@ -13,6 +13,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { acceptInviteCode, createInviteCode } from '@/services/conflictService';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 
@@ -103,9 +104,12 @@ export default function Pair() {
     <View style={styles.container}>
       <Wash />
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.charWrap}>
+          <Maedeubi size={64} />
+        </View>
         <Text style={ui.statement}>둘을 연결할 차례예요</Text>
         <Text style={styles.subtitle}>
-          한 명이 초대 코드를 만들고,{'\n'}상대가 그 코드를 입력하면 연결돼요.
+          한 명이 초대 코드를 만들고, 상대가 입력하면{'\n'}매듭이가 두 사람을 이어드릴게요.
         </Text>
 
         <View style={styles.card}>
@@ -149,7 +153,8 @@ export default function Pair() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: 24, paddingTop: 100, paddingBottom: 48 },
+  content: { paddingHorizontal: 24, paddingTop: 84, paddingBottom: 48 },
+  charWrap: { marginBottom: 16 },
   subtitle: {
     ...ui.statementSub,
     marginTop: 10,

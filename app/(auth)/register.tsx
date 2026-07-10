@@ -13,6 +13,7 @@ import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { Wash } from '@/components/ui/Wash';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { colors, fonts, ui } from '@/constants/colors';
 
@@ -50,6 +51,9 @@ export default function Register() {
       <Wash />
       <View style={styles.inner}>
         <View style={styles.hero}>
+          <View style={styles.heroChar}>
+            <Maedeubi size={56} />
+          </View>
           <Text style={ui.statement}>시작하기</Text>
           <Text style={styles.subtitle}>상대에게 보여질 이름을 알려주세요</Text>
         </View>
@@ -101,8 +105,9 @@ export default function Register() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, paddingHorizontal: 24, paddingTop: 140 },
-  hero: { marginBottom: 40 },
+  inner: { flex: 1, paddingHorizontal: 24, paddingTop: 100 },
+  hero: { marginBottom: 32 },
+  heroChar: { marginBottom: 14 },
   subtitle: {
     ...ui.statementSub,
     marginTop: 8,

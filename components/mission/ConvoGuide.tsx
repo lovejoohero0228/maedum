@@ -1,5 +1,6 @@
 // 대화 시작 방법 3단계 가이드 + 하단 주의사항 (AGENT.md §4-4) — 화이트 카드, 엠버 단계 번호 (EMBr 스타일)
 import { StyleSheet, Text, View } from 'react-native';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { ConvoStep } from '@/lib/types';
 
@@ -43,6 +44,7 @@ export function ConvoGuide({ steps, note, nameA, nameB, colorA, colorB }: ConvoG
         ))}
       {note ? (
         <View style={styles.note}>
+          <Maedeubi size={22} />
           <Text style={styles.noteText}>{note}</Text>
         </View>
       ) : null}
@@ -85,6 +87,15 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
     paddingTop: 12,
     marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
   },
-  noteText: { fontSize: 12, lineHeight: 19, color: colors.amberText, fontFamily: fonts.body },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 19,
+    color: colors.amberText,
+    fontFamily: fonts.body,
+  },
 });

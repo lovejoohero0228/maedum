@@ -2,6 +2,7 @@
 // 좌우: 각자 노력할 것(사용자 색), 하단: 둘이 함께 노력할 것. "자세히 보기" → /(main)/missions
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { colors, fonts, ui, userTheme, type UserColor } from '@/constants/colors';
 import type { OngoingMissionRecord } from '@/services/missionService';
 
@@ -53,7 +54,10 @@ export function MissionBoard({ records, myName, partnerName, myIsA, myColor }: M
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>우리가 이어가는 노력</Text>
+        <View style={styles.headerLeft}>
+          <Maedeubi size={20} />
+          <Text style={styles.sectionTitle}>우리가 이어가는 노력</Text>
+        </View>
         <Pressable onPress={() => router.push('/(main)/missions')} hitSlop={8}>
           <Text style={styles.detailLink}>자세히 보기 →</Text>
         </Pressable>
@@ -87,6 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   sectionTitle: {
     fontSize: 15,
     color: colors.ink,

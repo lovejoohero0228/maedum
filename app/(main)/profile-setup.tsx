@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { useConflictStore } from '@/store/conflictStore';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
 import { PERSONALITY_TAGS } from '@/constants/relationshipTags';
@@ -98,6 +99,12 @@ export default function ProfileSetup() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {step === 1 ? (
           <>
+            <View style={styles.charWrap}>
+              <Maedeubi size={72} />
+            </View>
+            <Text style={styles.greeting}>
+              안녕하세요, 두 마음을 잇는 매듭이예요.
+            </Text>
             <Text style={ui.statement}>어떻게 불러드릴까요?</Text>
             <Text style={styles.sub}>상대에게 보여질 이름이에요.</Text>
             <TextInput
@@ -176,6 +183,13 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 24, gap: 16, marginBottom: 24 },
   back: { fontSize: 22, color: colors.ink2 },
   scroll: { paddingHorizontal: 24, paddingBottom: 24 },
+  charWrap: { marginBottom: 16 },
+  greeting: {
+    fontSize: 13,
+    color: colors.purpleText,
+    fontFamily: fonts.bodyMedium,
+    marginBottom: 10,
+  },
   sub: {
     ...ui.statementSub,
     marginTop: 8,

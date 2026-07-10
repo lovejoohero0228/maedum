@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { getOngoingMissions, type OngoingMissionRecord } from '@/services/missionService';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui, userTheme } from '@/constants/colors';
 
@@ -65,9 +66,12 @@ export default function Missions() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {loaded && records.length === 0 ? (
-          <Text style={styles.empty}>
-            아직 이어가는 노력이 없어요.{'\n'}첫 맺음을 마치면 여기에 쌓이기 시작해요.
-          </Text>
+          <View style={styles.emptyWrap}>
+            <Maedeubi size={64} />
+            <Text style={styles.empty}>
+              아직 이어가는 노력이 없어요.{'\n'}첫 맺음을 마치면 매듭이가 여기 모아둘게요.
+            </Text>
+          </View>
         ) : null}
 
         {records.map((r) => {
@@ -129,13 +133,13 @@ const styles = StyleSheet.create({
   back: { fontSize: 22, color: colors.ink2 },
   sub: { ...ui.statementSub, marginTop: 8, marginBottom: 20 },
   scroll: { paddingBottom: 48 },
+  emptyWrap: { alignItems: 'center', marginTop: 48, gap: 16 },
   empty: {
     fontSize: 14,
     lineHeight: 22,
     color: colors.ink3,
     fontFamily: fonts.body,
     textAlign: 'center',
-    marginTop: 48,
   },
   recordCard: {
     ...ui.card,

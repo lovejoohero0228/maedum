@@ -11,6 +11,7 @@ import { getOngoingMissions, type OngoingMissionRecord } from '@/services/missio
 import { showAlert, showConfirm } from '@/lib/alert';
 import { MissionBoard } from '@/components/home/MissionBoard';
 import { Avatar } from '@/components/ui/Avatar';
+import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, gradients, ui } from '@/constants/colors';
 import { parseHomeBackground } from '@/constants/homeBackgrounds';
@@ -198,7 +199,14 @@ export default function Home() {
       <View style={styles.headline}>
         {couple && partner ? (
           <>
-            <Text style={ui.statement}>서운했던 마음,{'\n'}정리해서 전해볼까요?</Text>
+            <View style={styles.headlineRow}>
+              <View style={styles.headlineChar}>
+                <Maedeubi size={56} />
+              </View>
+              <Text style={[ui.statement, styles.headlineText]}>
+                서운했던 마음,{'\n'}정리해서 전해볼까요?
+              </Text>
+            </View>
             <View style={styles.coupleRow}>
               <Avatar name={profile?.display_name ?? ''} color={myColor()} size={24} />
               <Avatar
@@ -213,7 +221,14 @@ export default function Home() {
           </>
         ) : (
           <>
-            <Text style={ui.statement}>둘을 연결하는 것부터{'\n'}시작해볼까요?</Text>
+            <View style={styles.headlineRow}>
+              <View style={styles.headlineChar}>
+                <Maedeubi size={56} />
+              </View>
+              <Text style={[ui.statement, styles.headlineText]}>
+                둘을 연결하는 것부터{'\n'}시작해볼까요?
+              </Text>
+            </View>
             <Text style={styles.headlineSub}>아직 상대와 연결되지 않았어요.</Text>
           </>
         )}
@@ -246,14 +261,19 @@ export default function Home() {
               end={{ x: 1, y: 1 }}
               style={styles.emberCard}
             >
-              <Text style={styles.emberLabel}>
-                {partnerStarted
-                  ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
-                  : '진행 중인 맺음'}
-              </Text>
-              <View style={styles.emberRow}>
-                <Text style={styles.emberTitle}>{STATUS_LABEL[conflict.status]}</Text>
-                <Text style={styles.emberArrow}>→</Text>
+              <View style={styles.emberTopRow}>
+                <View style={styles.emberBody}>
+                  <Text style={styles.emberLabel}>
+                    {partnerStarted
+                      ? `${partner?.display_name ?? '상대'}가 대화를 시작하고 싶어해요`
+                      : '진행 중인 맺음'}
+                  </Text>
+                  <View style={styles.emberRow}>
+                    <Text style={styles.emberTitle}>{STATUS_LABEL[conflict.status]}</Text>
+                    <Text style={styles.emberArrow}>→</Text>
+                  </View>
+                </View>
+                <Maedeubi size={48} />
               </View>
             </LinearGradient>
           </Pressable>
@@ -281,8 +301,13 @@ export default function Home() {
             end={{ x: 1, y: 1 }}
             style={styles.emberCard}
           >
-            <Text style={styles.emberTitle}>맺음 시작</Text>
-            <Text style={styles.emberSub}>오늘, 하고 싶었던 이야기가 있나요?</Text>
+            <View style={styles.emberTopRow}>
+              <View style={styles.emberBody}>
+                <Text style={styles.emberTitle}>맺음 시작</Text>
+                <Text style={styles.emberSub}>오늘, 하고 싶었던 이야기가 있나요?</Text>
+              </View>
+              <Maedeubi size={52} />
+            </View>
             <View style={styles.emberFauxInput}>
               <Text style={styles.emberFauxInputText}>마음속 이야기를 들려주세요…</Text>
             </View>
@@ -343,7 +368,10 @@ const styles = StyleSheet.create({
   addPartnerIcon: { fontSize: 18, color: colors.ink3 },
   body: { flex: 1, marginHorizontal: -24 },
   bodyContent: { flexGrow: 1, paddingHorizontal: 24 },
-  headline: { marginTop: 36, marginBottom: 24 },
+  headline: { marginTop: 32, marginBottom: 24 },
+  headlineRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  headlineChar: { marginTop: 2 },
+  headlineText: { flex: 1 },
   headlineSub: { ...ui.statementSub, marginTop: 10 },
   coupleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   coupleNames: {
@@ -370,6 +398,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 22,
   },
+  emberTopRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  emberBody: { flex: 1 },
   emberLabel: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
