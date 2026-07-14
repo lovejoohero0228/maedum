@@ -9,7 +9,6 @@ import { showAlert, showConfirm } from '@/lib/alert';
 import { Avatar } from '@/components/ui/Avatar';
 import { Wash } from '@/components/ui/Wash';
 import { colors, fonts, ui } from '@/constants/colors';
-import { characterByKey } from '@/constants/characters';
 
 export default function Profile() {
   const session = useConflictStore((s) => s.session);
@@ -62,13 +61,12 @@ export default function Profile() {
           style={[styles.card, styles.meCard]}
           onPress={() => router.push('/(main)/profile-setup')}
         >
-          {characterByKey(profile.character_key) ? (
-            <View style={styles.charCircle}>
-              <Text style={styles.charEmoji}>{characterByKey(profile.character_key)!.emoji}</Text>
-            </View>
-          ) : (
-            <Avatar name={profile.display_name} color={myColor()} size={52} />
-          )}
+          <Avatar
+            name={profile.display_name}
+            color={myColor()}
+            size={52}
+            characterKey={profile.character_key}
+          />
           <View style={styles.meBody}>
             <Text style={styles.name}>{profile.display_name}</Text>
             <Text style={styles.email}>{session?.user.email}</Text>
@@ -104,6 +102,7 @@ export default function Profile() {
                   name={p?.display_name ?? '?'}
                   color={myColor() === 'blue' ? 'coral' : 'blue'}
                   size={36}
+                  characterKey={p?.character_key}
                 />
                 <Text style={styles.partnerName}>{p?.display_name ?? '상대'}</Text>
                 <Pressable
@@ -151,15 +150,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   meBody: { flex: 1 },
-  charCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.chipSelected,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  charEmoji: { fontSize: 28 },
   tags: { fontSize: 12, color: colors.ink3, marginTop: 4, fontFamily: fonts.body },
   name: {
     fontSize: 19,

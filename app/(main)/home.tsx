@@ -154,7 +154,14 @@ export default function Home() {
             <Text style={styles.addPartnerLink}>＋ 상대 추가</Text>
           </Pressable>
           <Pressable onPress={() => router.push('/(main)/profile')}>
-            {profile ? <Avatar name={profile.display_name} color={myColor()} size={34} /> : null}
+            {profile ? (
+              <Avatar
+                name={profile.display_name}
+                color={myColor()}
+                size={34}
+                characterKey={profile.character_key}
+              />
+            ) : null}
           </Pressable>
         </View>
       </View>
@@ -175,7 +182,12 @@ export default function Home() {
                 style={[styles.partnerChip, isActive && styles.partnerChipActive]}
                 onPress={() => selectCouple(c.id)}
               >
-                <Avatar name={p?.display_name ?? '?'} color="coral" size={24} />
+                <Avatar
+                  name={p?.display_name ?? '?'}
+                  color="coral"
+                  size={24}
+                  characterKey={p?.character_key}
+                />
                 <Text
                   style={[styles.partnerChipName, isActive && styles.partnerChipNameActive]}
                   numberOfLines={1}
@@ -209,11 +221,17 @@ export default function Home() {
               </Text>
             </View>
             <View style={styles.coupleRow}>
-              <Avatar name={profile?.display_name ?? ''} color={myColor()} size={24} />
+              <Avatar
+                name={profile?.display_name ?? ''}
+                color={myColor()}
+                size={24}
+                characterKey={profile?.character_key}
+              />
               <Avatar
                 name={partner.display_name}
                 color={myColor() === 'blue' ? 'coral' : 'blue'}
                 size={24}
+                characterKey={partner.character_key}
               />
               <Text style={styles.coupleNames}>
                 {profile?.display_name} & {partner.display_name}
