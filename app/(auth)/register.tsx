@@ -14,7 +14,8 @@ import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
 import { Wash } from '@/components/ui/Wash';
 import { Maedeubi } from '@/components/ui/Maedeubi';
-import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
+// 소셜 로그인 비활성화 — Supabase 대시보드에서 Kakao/Google provider 설정 후 다시 활성화
+// import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { colors, fonts, ui } from '@/constants/colors';
 
 export default function Register() {
@@ -93,7 +94,7 @@ export default function Register() {
           >
             <Text style={ui.primaryPillText}>{loading ? '가입 중…' : '가입하기'}</Text>
           </Pressable>
-          <SocialLoginButtons />
+          {/* <SocialLoginButtons /> */}
           <Link href="/(auth)/login" style={styles.link}>
             이미 계정이 있어요
           </Link>
