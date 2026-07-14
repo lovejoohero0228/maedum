@@ -67,7 +67,8 @@ export default function ProfileSetup() {
         .eq('id', session.user.id);
       if (error) throw error;
       await loadProfile();
-      router.replace(isEdit ? '/(main)/profile' : '/(main)/home');
+      // 최초 가입이면 홈 대신 튜토리얼부터 보여준다 (스킵 가능)
+      router.replace(isEdit ? '/(main)/profile' : '/(main)/tutorial');
     } catch (e) {
       showAlert('저장 실패', e instanceof Error ? e.message : String(e));
     } finally {

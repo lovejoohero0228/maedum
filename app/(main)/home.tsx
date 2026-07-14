@@ -342,6 +342,10 @@ export default function Home() {
         <Pressable onPress={() => router.push('/(main)/profile')}>
           <Text style={styles.footerLink}>프로필</Text>
         </Pressable>
+        <Text style={styles.footerDot}>·</Text>
+        <Pressable onPress={() => router.push('/(main)/tutorial')}>
+          <Text style={styles.footerLink}>튜토리얼</Text>
+        </Pressable>
       </View>
       </ScrollView>
     </View>
