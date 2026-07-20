@@ -10,6 +10,7 @@ import {
   corsHeaders,
   json,
   parseModelJson,
+  errorMessage,
 } from "../_shared/utils.ts";
 import { REFERENCE_BANK_SYSTEM } from "../../../prompts/reference_bank.ts";
 
@@ -87,6 +88,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, reference_bank: bank });
   } catch (e) {
     console.error(e);
-    return json({ error: String(e) }, 500);
+    return json({ error: errorMessage(e) }, 500);
   }
 });

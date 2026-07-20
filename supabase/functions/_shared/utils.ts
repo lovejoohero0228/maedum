@@ -37,6 +37,23 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// 에러를 사람이 읽을 문자열로 — OpenAI SDK의 APIError 같은 비-Error 객체를
+// String()으로 감싸면 "[object Object]"가 되어 원인 파악이 불가능해진다.
+export function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object") {
+    const m = (e as { message?: unknown }).message;
+    if (typeof m === "string" && m) return m;
+    try {
+      return JSON.stringify(e);
+    } catch {
+      /* fallthrough */
+    }
+  }
+  return String(e);
+}
+
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,

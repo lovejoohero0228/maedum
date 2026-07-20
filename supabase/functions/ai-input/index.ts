@@ -23,6 +23,7 @@ import {
   corsHeaders,
   json,
   parseModelJson,
+  errorMessage,
 } from "../_shared/utils.ts";
 import { INPUT_GUIDE_SYSTEM, INPUT_FIELDS } from "../../../prompts/input_guide.ts";
 import type { InputField } from "../../../prompts/input_guide.ts";
@@ -129,6 +130,16 @@ const FREE_TEXT_EXEMPT_FIELDS = new Set([
 // (첫 질문 1턴 + 재질문/자유서술 후속 1턴. 사용자 제출 횟수 최소화가 최우선)
 const MAX_QUESTION_TURNS_PER_FIELD = 2;
 
+// request의 extracted_value에서 refined가 실제로 채워져 있는지 확인
+function requestRefined(extractedValue: string): boolean {
+  try {
+    const parsed = JSON.parse(extractedValue) as { refined?: unknown };
+    return typeof parsed.refined === "string" && parsed.refined.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function envelopeViolation(
   envelope: GuideEnvelope,
   fieldKey: string,
@@ -140,7 +151,17 @@ function envelopeViolation(
     return "message가 비어 있음 — 사용자에게 보일 공감/질문 문장을 반드시 채워야 함";
   }
   if (envelope.field_complete) {
-    return envelope.extracted_value ? null : "field_complete인데 extracted_value가 비어 있음";
+    if (!envelope.extracted_value) return "field_complete인데 extracted_value가 비어 있음";
+    // request는 refined(구체적 요청)까지 받아야 완료다 — 욕구 선택만 받고 refined: null로
+    // 조기 완료되면 편지에 실을 실제 요청이 통째로 사라진다 (2차 라이브 테스트에서 관측)
+    if (fieldKey === "request" && !requestRefined(envelope.extracted_value)) {
+      return (
+        "request의 extracted_value에 refined(구체적 상황 + 상대가 실제로 할 수 있는 말/행동)가 " +
+        "비어 있음 — 아직 구체적 요청을 받지 못했다면 field_complete: false로 두고, 선택지 없이 " +
+        "자유서술로 그 한마디를 물어야 함"
+      );
+    }
+    return null;
   }
   const fieldTurns = chatLog.filter((e) => e.field === fieldKey && e.role === "assistant");
 
@@ -427,6 +448,26 @@ async function generateEnvelope(
   if (envelope.field_complete && !envelope.extracted_value) {
     envelope.field_complete = false;
   }
+  // request가 재시도 후에도 refined 없이 완료로 남았으면 완료를 되돌리고,
+  // 자유서술로 구체적 요청 한마디를 직접 묻는다 (request는 자유서술 허용 필드).
+  if (
+    envelope.field_complete &&
+    field.key === "request" &&
+    !requestRefined(envelope.extracted_value!)
+  ) {
+    envelope.field_complete = false;
+    envelope.extracted_value = null;
+    envelope.choice_groups = null;
+    envelope.type = "clarify";
+    envelope.message =
+      "그 마음이 실제로 채워지는 모습을 조금 더 구체적으로 듣고 싶어요. " +
+      "상대가 어떤 말이나 행동을 해주면 좋을까요? 실제로 해줬으면 하는 한마디여도 좋아요.";
+  }
+  // 완료 턴에 "좀 더 확인이 필요해요"(warn)가 붙어 나가는 의미 불일치 정리
+  if (envelope.field_complete && envelope.flag === "warn") {
+    envelope.flag = "ok";
+    envelope.flag_text = "좋아요, 이해됐어요";
+  }
   // 재시도까지 message가 계속 비면 고정 문구로라도 채운다 — 빈 말풍선은 데드엔드이고
   // chat_log에 영구 저장되므로 500보다도, 빈 문자열보다도 폴백 문구가 낫다.
   if (!envelope.message.trim()) {
@@ -696,6 +737,6 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error(e);
-    return json({ error: String(e) }, 500);
+    return json({ error: errorMessage(e) }, 500);
   }
 });

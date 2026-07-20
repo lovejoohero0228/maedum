@@ -13,6 +13,7 @@ import {
   corsHeaders,
   json,
   parseModelJson,
+  errorMessage,
   sendPush,
 } from "../_shared/utils.ts";
 import { LETTER_REFINE_SYSTEM } from "../../../prompts/letter_refine.ts";
@@ -227,6 +228,6 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   } catch (e) {
     console.error(e);
-    return json({ error: String(e) }, 500);
+    return json({ error: errorMessage(e) }, 500);
   }
 });

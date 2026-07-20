@@ -10,6 +10,7 @@ import {
   corsHeaders,
   json,
   parseModelJson,
+  errorMessage,
   sendPush,
 } from "../_shared/utils.ts";
 import { MISSION_SYSTEM } from "../../../prompts/mission.ts";
@@ -267,6 +268,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, ...mission });
   } catch (e) {
     console.error(e);
-    return json({ error: String(e) }, 500);
+    return json({ error: errorMessage(e) }, 500);
   }
 });

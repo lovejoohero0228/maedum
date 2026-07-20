@@ -12,6 +12,7 @@ import {
   AI_MODEL,
   corsHeaders,
   json,
+  errorMessage,
 } from "../_shared/utils.ts";
 import { HISTORY_SUMMARY_SYSTEM } from "../../../prompts/history_summary.ts";
 
@@ -123,6 +124,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, merged });
   } catch (e) {
     console.error(e);
-    return json({ error: String(e) }, 500);
+    return json({ error: errorMessage(e) }, 500);
   }
 });
