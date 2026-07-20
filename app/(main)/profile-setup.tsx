@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { useConflictStore } from '@/store/conflictStore';
 import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
@@ -25,6 +26,7 @@ export default function ProfileSetup() {
   const session = useConflictStore((s) => s.session);
   const profile = useConflictStore((s) => s.profile);
   const loadProfile = useConflictStore((s) => s.loadProfile);
+  const reset = useConflictStore((s) => s.reset);
 
   const isEdit = !!profile?.onboarded_at;
   const [step, setStep] = useState(1);
@@ -47,12 +49,7 @@ export default function ProfileSetup() {
   const canProceed =
     step === 1 ? name.trim().length > 0 : step === 2 ? tags.length > 0 : !!characterKey;
 
-  const onNext = async () => {
-    if (!canProceed || saving) return;
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-      return;
-    }
+  const saveProfile = async () => {
     if (!session) return;
     setSaving(true);
     try {
@@ -70,15 +67,41 @@ export default function ProfileSetup() {
       // 최초 가입이면 홈 대신 튜토리얼부터 보여준다 (스킵 가능)
       router.replace(isEdit ? '/(main)/profile' : '/(main)/tutorial');
     } catch (e) {
-      showAlert('저장 실패', e instanceof Error ? e.message : String(e));
+      showAlert('저장 실패', friendlyErrorMessage(e, '저장하지 못했어요. 잠시 후 다시 시도해주세요.'));
     } finally {
       setSaving(false);
     }
   };
 
+  const onNext = async () => {
+    if (!canProceed || saving) return;
+    if (step < TOTAL_STEPS) {
+      setStep(step + 1);
+      return;
+    }
+    await saveProfile();
+  };
+
+  // 성격/캐릭터는 나중에 프로필에서 골라도 된다 — 건너뛰어도 온보딩은 완료 처리
+  const onSkip = async () => {
+    if (saving) return;
+    if (step < TOTAL_STEPS) {
+      setStep(step + 1);
+      return;
+    }
+    await saveProfile();
+  };
+
   const onBack = () => {
     if (step > 1) setStep(step - 1);
     else if (isEdit) router.back();
+  };
+
+  // 다른 계정으로 다시 시작하고 싶은 신규 가입자를 위한 출구
+  const onSwitchAccount = async () => {
+    await supabase.auth.signOut();
+    reset();
+    router.replace('/(auth)/login');
   };
 
   return (
@@ -116,6 +139,17 @@ export default function ProfileSetup() {
               onChangeText={setName}
               autoFocus={!isEdit}
             />
+            {!isEdit ? (
+              <Pressable
+                onPress={onSwitchAccount}
+                hitSlop={8}
+                style={styles.switchAccount}
+                accessibilityRole="button"
+                accessibilityLabel="다른 계정으로 로그인"
+              >
+                <Text style={styles.switchAccountText}>다른 계정으로 로그인</Text>
+              </Pressable>
+            ) : null}
           </>
         ) : null}
 
@@ -174,6 +208,18 @@ export default function ProfileSetup() {
             {saving ? '저장 중…' : step < TOTAL_STEPS ? '다음' : isEdit ? '저장하기' : '시작하기'}
           </Text>
         </Pressable>
+        {step > 1 ? (
+          <Pressable
+            onPress={onSkip}
+            hitSlop={8}
+            style={styles.skip}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="이 단계 건너뛰기"
+          >
+            <Text style={styles.skipText}>건너뛰기</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -207,6 +253,8 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fonts.body,
   },
+  switchAccount: { marginTop: 20, alignSelf: 'flex-start' },
+  switchAccountText: { ...ui.quietCta, fontSize: 13, color: colors.ink3 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   charGrid: {
     flexDirection: 'row',
@@ -238,4 +286,6 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingBottom: 32 },
   button: { ...ui.primaryPill, alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },
+  skip: { marginTop: 12, alignSelf: 'center' },
+  skipText: { ...ui.quietCta, fontSize: 13, color: colors.ink3 },
 });

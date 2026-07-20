@@ -32,6 +32,51 @@ interface MissionResult {
   convo_note: string;
 }
 
+// json_object 모드는 스키마 준수를 보장하지 않으므로 룰 기반으로 검증한다.
+// 위반 사유 문자열을 반환하면 피드백을 붙여 1회 재생성한다 (null이면 통과).
+function missionViolation(mission: MissionResult, contextNorm: string): string | null {
+  if (mission.mission_a.length !== 3 || mission.mission_b.length !== 3) {
+    return "mission_a/mission_b는 각각 정확히 3개(prevent/differently/empathy 1개씩)여야 함";
+  }
+  if (mission.small_mission_a.length !== 2 || mission.small_mission_b.length !== 2) {
+    return "small_mission_a/small_mission_b는 각각 정확히 2개여야 함";
+  }
+  if (mission.mission_both.length < 1 || mission.mission_both.length > 2) {
+    return "mission_both는 1~2개여야 함";
+  }
+  if (mission.convo_guide.length !== 4) {
+    return "convo_guide는 정확히 4단계여야 함";
+  }
+  // 허위 인용 검증: 미션/마인드셋 문장 안에서 따옴표로 인용된 말은 반드시
+  // 입력 데이터(문답·편지·분석)에 실제로 등장해야 한다. (프롬프트 예시를 그대로
+  // 베껴 "하지도 않은 말"을 인용하는 사례가 실제로 관측됨)
+  const norm = (s: string) => s.replace(/\s+/g, "");
+  const texts = [
+    mission.mindset_a,
+    mission.mindset_b,
+    ...mission.mission_a.map((m) => m.text),
+    ...mission.mission_b.map((m) => m.text),
+    ...mission.small_mission_a.map((m) => m.text),
+    ...mission.small_mission_b.map((m) => m.text),
+    ...mission.mission_both.map((m) => m.text),
+    ...mission.convo_guide.flatMap((s) => [s.text, s.listener ?? ""]),
+    mission.convo_note,
+  ];
+  for (const t of texts) {
+    for (const match of t.matchAll(/['‘"“]([^'’"”]{4,60})['’"”]/g)) {
+      const quoted = norm(match[1]);
+      // 4자 미만/조사 차이 수준의 짧은 인용은 오탐이 많아 건너뛴다
+      if (quoted.length >= 4 && !contextNorm.includes(quoted)) {
+        return (
+          `인용문 "${match[1]}"이 입력 데이터에 존재하지 않음 — 두 사람이 실제로 한 말만 ` +
+          "따옴표로 인용할 수 있음. 실제 문장이 없으면 인용 형식 없이 행동/상황을 지칭할 것"
+        );
+      }
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -131,32 +176,62 @@ Deno.serve(async (req) => {
     );
 
     const openai = openaiClient();
-    const res = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 4096,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context) },
-        { role: "user", content: "화해 미션 페이퍼를 생성해주세요." },
-      ],
-    });
-
-    const content = res.choices[0]?.message?.content;
-    if (!content) throw new Error("no mission text");
-    const mission = parseModelJson<Partial<MissionResult>>(content);
-    // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 필드 누락을 명시적으로 검증
-    if (
-      !Array.isArray(mission.mission_a) ||
-      !Array.isArray(mission.mission_b) ||
-      !Array.isArray(mission.small_mission_a) ||
-      !Array.isArray(mission.small_mission_b) ||
-      !Array.isArray(mission.mission_both) ||
-      !Array.isArray(mission.convo_guide) ||
-      typeof mission.mindset_a !== "string" ||
-      typeof mission.mindset_b !== "string"
-    ) {
-      throw new Error(`mission response missing required fields: ${JSON.stringify(mission)}`);
+    const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      { role: "system", content: MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context) },
+      { role: "user", content: "화해 미션 페이퍼를 생성해주세요." },
+    ];
+    const contextNorm = context.replace(/\s+/g, "");
+    const MAX_MISSION_ATTEMPTS = 2;
+    let mission!: MissionResult;
+    let lastContent = "";
+    let lastViolation: string | null = null;
+    for (let attempt = 0; attempt < MAX_MISSION_ATTEMPTS; attempt++) {
+      const messages =
+        attempt === 0
+          ? baseMessages
+          : [
+              ...baseMessages,
+              { role: "assistant" as const, content: lastContent },
+              {
+                role: "user" as const,
+                content:
+                  `(자동 검증 실패 — 방금 응답은 규칙 위반: ${lastViolation}) ` +
+                  "같은 내용을 유지하되 위반만 고친 완전한 JSON으로 다시 응답하세요.",
+              },
+            ];
+      const res = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_tokens: 4096,
+        response_format: { type: "json_object" },
+        messages,
+      });
+      const content = res.choices[0]?.message?.content;
+      if (!content) throw new Error("no mission text");
+      lastContent = content;
+      const parsed = parseModelJson<Partial<MissionResult>>(content);
+      // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 필드 누락을 명시적으로 검증
+      if (
+        !Array.isArray(parsed.mission_a) ||
+        !Array.isArray(parsed.mission_b) ||
+        !Array.isArray(parsed.small_mission_a) ||
+        !Array.isArray(parsed.small_mission_b) ||
+        !Array.isArray(parsed.mission_both) ||
+        !Array.isArray(parsed.convo_guide) ||
+        typeof parsed.mindset_a !== "string" ||
+        typeof parsed.mindset_b !== "string"
+      ) {
+        throw new Error(`mission response missing required fields: ${JSON.stringify(parsed)}`);
+      }
+      mission = parsed as MissionResult;
+      lastViolation = missionViolation(mission, contextNorm);
+      if (!lastViolation) break;
+      console.warn(
+        `mission invalid (attempt ${attempt + 1}/${MAX_MISSION_ATTEMPTS}): ${lastViolation}`,
+      );
     }
+    // 재시도 후에도 위반이 남으면 미션 전달 자체를 막기보다 로그만 남기고 통과시킨다
+    // (개수/인용 위반은 무한 로딩보다 낫다 — 클라이언트에 재생성 경로가 있다)
+    if (lastViolation) console.error(`mission delivered with violation: ${lastViolation}`);
 
     const { error: updateError } = await admin
       .from("conflict_outputs")

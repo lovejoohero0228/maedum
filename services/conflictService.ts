@@ -14,9 +14,15 @@ export async function getMyCouples(userId: string): Promise<Couple[]> {
   return data ?? [];
 }
 
+// 헷갈리는 글자(0/O, 1/I/L) 없는 알파벳 — 코드를 입으로 불러주거나 손으로 옮겨 적을 때를 위해
+const INVITE_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
 export async function createInviteCode(userId: string): Promise<string> {
-  // 6자리 영숫자 코드
-  const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+  // 6자리 코드 (대문자, 모호 문자 제외)
+  const code = Array.from(
+    { length: 6 },
+    () => INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)],
+  ).join('');
   const { error } = await supabase
     .from('couple_invites')
     .upsert({ code, inviter_id: userId }, { onConflict: 'inviter_id' });

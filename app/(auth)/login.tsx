@@ -12,6 +12,7 @@ import {
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '@/lib/alert';
+import { authErrorMessage } from '@/lib/errors';
 import { Wash } from '@/components/ui/Wash';
 import { Maedeubi } from '@/components/ui/Maedeubi';
 // 소셜 로그인 비활성화 — Supabase 대시보드에서 Kakao/Google provider 설정 후 다시 활성화
@@ -24,15 +25,34 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const onLogin = async () => {
-    if (!email || !password) return;
+    if (!email || !password) {
+      showAlert('입력 확인', '이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      showAlert('로그인 실패', error.message);
+      showAlert('로그인 실패', authErrorMessage(error));
       return;
     }
     router.replace('/(main)/home');
+  };
+
+  const onResetPassword = async () => {
+    if (!email) {
+      showAlert('이메일 입력', '가입한 이메일을 먼저 입력해주세요.');
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) {
+      showAlert('메일 전송 실패', authErrorMessage(error));
+      return;
+    }
+    showAlert(
+      '재설정 메일을 보냈어요',
+      '메일의 안내에 따라 비밀번호를 바꾼 뒤 다시 로그인해주세요.',
+    );
   };
 
   return (
@@ -60,6 +80,7 @@ export default function Login() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            accessibilityLabel="이메일 입력"
           />
           <TextInput
             style={styles.input}
@@ -68,7 +89,17 @@ export default function Login() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            accessibilityLabel="비밀번호 입력"
           />
+          <Pressable
+            onPress={onResetPassword}
+            hitSlop={8}
+            style={styles.forgot}
+            accessibilityRole="button"
+            accessibilityLabel="비밀번호 재설정 메일 보내기"
+          >
+            <Text style={styles.forgotText}>비밀번호를 잊으셨나요?</Text>
+          </Pressable>
         </View>
 
         <View style={styles.footer}>
@@ -76,6 +107,8 @@ export default function Login() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={onLogin}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="로그인"
           >
             <Text style={ui.primaryPillText}>{loading ? '로그인 중…' : '로그인'}</Text>
           </Pressable>
@@ -117,6 +150,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: fonts.body,
   },
+  forgot: { alignSelf: 'flex-end', marginTop: 2 },
+  forgotText: { ...ui.quietCta, fontSize: 13, color: colors.ink3 },
   footer: { marginTop: 'auto', marginBottom: 32 },
   button: {
     ...ui.primaryPill,

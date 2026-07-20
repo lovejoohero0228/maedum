@@ -22,6 +22,16 @@ export async function askInputGuide(
   return data as GuideResponse;
 }
 
+// 03단계: 편지 생성 재시도 — 자동 트리거(ai-input→ai-letters)가 실패해 ai_processing에
+// 갇혔을 때 waiting 화면에서 호출한다. 멱등(이미 생성돼 있으면 서버가 no-op).
+export async function requestLetters(conflictId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('ai-letters', {
+    body: { conflict_id: conflictId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
 // 04단계: 양쪽 ready 후 미션 페이퍼 생성 요청 (멱등, force면 기존 미션을 버리고 재생성)
 export async function requestMission(conflictId: string, force = false): Promise<void> {
   const { data, error } = await supabase.functions.invoke('ai-mission', {

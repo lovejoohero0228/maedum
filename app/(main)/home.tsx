@@ -1,6 +1,6 @@
 // 홈 — 플로우 진입점 (AGENT.md §2)
 // 커플 없음 → pair, 진행 중 갈등 → 상태에 맞는 화면 이어가기, 없으면 "맺음 시작"
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -60,10 +60,21 @@ export default function Home() {
   const selectCouple = useConflictStore((s) => s.selectCouple);
   const myColor = useConflictStore((s) => s.myColor);
   const [deleting, setDeleting] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  // 포커스마다 재시도되므로, 알림성 표시는 마운트당 한 번만
+  const loadErrorNotifiedRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      loadCouples().catch((e) => console.error('loadCouples failed', e));
+      loadCouples()
+        .then(() => setLoadFailed(false))
+        .catch((e) => {
+          console.error('loadCouples failed', e);
+          if (!loadErrorNotifiedRef.current) {
+            loadErrorNotifiedRef.current = true;
+            setLoadFailed(true);
+          }
+        });
     }, [loadCouples]),
   );
 
@@ -122,7 +133,7 @@ export default function Home() {
     if (!conflict || deleting) return;
     const ok = await showConfirm(
       '진행 중인 맺음을 삭제할까요?',
-      '지금까지 입력한 내용이 모두 사라지고, 처음부터 다시 시작하게 돼요.',
+      '지금까지 입력한 내용이 모두 사라지고, 처음부터 다시 시작하게 돼요.\n상대가 입력한 내용도 함께 삭제되고, 되돌릴 수 없어요.',
       '삭제',
     );
     if (!ok) return;
@@ -208,6 +219,13 @@ export default function Home() {
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
+      {loadFailed ? (
+        <View style={styles.loadErrorBox}>
+          <Text style={styles.loadErrorText}>
+            데이터를 불러오지 못했어요. 네트워크를 확인해주세요.
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.headline}>
         {couple && partner ? (
           <>
@@ -390,6 +408,19 @@ const styles = StyleSheet.create({
   },
   addPartnerIcon: { fontSize: 18, color: colors.ink3 },
   body: { flex: 1, marginHorizontal: -24 },
+  loadErrorBox: {
+    backgroundColor: colors.amberTint,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 16,
+  },
+  loadErrorText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.amberText,
+    fontFamily: fonts.body,
+  },
   bodyContent: { flexGrow: 1, paddingHorizontal: 24 },
   headline: { marginTop: 32, marginBottom: 24 },
   headlineRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },

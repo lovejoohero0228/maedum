@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showConfirm } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { useConflictStore } from '@/store/conflictStore';
 import { resolveConflict } from '@/services/conflictService';
 import { generateMission } from '@/services/missionService';
@@ -34,6 +35,11 @@ export default function Mission() {
   const setConflict = useConflictStore((s) => s.setConflict);
   const [busy, setBusy] = useState(false);
   const regenRequestedRef = useRef(false);
+  // 생성이 서버에서 조용히 실패하면 로딩이 영원히 이어진다 — 에러/타임아웃 시 "다시 시도"를 노출
+  const [genError, setGenError] = useState<string | null>(null);
+  const [genTimedOut, setGenTimedOut] = useState(false);
+  const [retryingGen, setRetryingGen] = useState(false);
+  const [genAttempt, setGenAttempt] = useState(0);
 
   // 개편 전 형식(마음가짐/작은 미션/함께 미션 없음)은 준비 안 된 것으로 취급 — 아래 effect가 재생성을 요청한다
   const missionReady =
@@ -46,8 +52,37 @@ export default function Mission() {
   useEffect(() => {
     if (!conflict || !outputs || missionReady || regenRequestedRef.current) return;
     regenRequestedRef.current = true;
-    generateMission(conflict.id).catch(() => {});
+    generateMission(conflict.id).catch((e) => {
+      setGenError(friendlyErrorMessage(e, '미션을 만들지 못했어요. 잠시 후 다시 시도해주세요.'));
+    });
   }, [conflict, outputs, missionReady]);
+
+  // 미션 준비 타임아웃 타이머 — 준비가 끝나거나 재시도할 때마다 다시 잰다
+  useEffect(() => {
+    if (missionReady) {
+      setGenTimedOut(false);
+      return;
+    }
+    setGenTimedOut(false);
+    const timer = setTimeout(() => setGenTimedOut(true), 90000);
+    return () => clearTimeout(timer);
+  }, [missionReady, genAttempt]);
+
+  // 실패/지연 시 재생성 요청 — 서버가 멱등 처리하므로 반복 호출에 안전
+  const onRetryGenerate = async () => {
+    if (!conflict || retryingGen) return;
+    setRetryingGen(true);
+    setGenError(null);
+    try {
+      await generateMission(conflict.id);
+      await loadOutputs();
+    } catch (e) {
+      setGenError(friendlyErrorMessage(e, '미션을 만들지 못했어요. 잠시 후 다시 시도해주세요.'));
+    } finally {
+      setGenAttempt((n) => n + 1);
+      setRetryingGen(false);
+    }
+  };
 
   // 미션 생성 완료 감지 — mission_unlocked 상태 변화 구독 + 폴링
   useEffect(() => {
@@ -85,7 +120,7 @@ export default function Mission() {
     if (!conflict || regenerating) return;
     const ok = await showConfirm(
       '미션 페이퍼를 다시 만들까요?',
-      '지금 미션은 사라지고, 두 사람의 문답과 편지를 바탕으로 새로 생성돼요.',
+      '지금 미션은 사라지고, 두 사람의 문답과 편지를 바탕으로 새로 생성돼요. 상대가 보고 있는 미션도 함께 바뀌어요.',
       '다시 만들기',
     );
     if (!ok) return;
@@ -94,7 +129,7 @@ export default function Mission() {
       await generateMission(conflict.id, true);
       await loadOutputs();
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('미션을 다시 만들지 못했어요', friendlyErrorMessage(e));
     } finally {
       setRegenerating(false);
     }
@@ -102,6 +137,13 @@ export default function Mission() {
 
   const onResolve = async () => {
     if (!conflict || busy) return;
+    // 두 사람 모두에게 적용되는 마무리이므로 확인을 거친다
+    const ok = await showConfirm(
+      '이번 맺음을 마무리할까요?',
+      '상대 화면에서도 함께 마무리돼요. 기록에서는 계속 볼 수 있어요.',
+      '마무리하기',
+    );
+    if (!ok) return;
     setBusy(true);
     try {
       await resolveConflict(conflict.id);
@@ -110,7 +152,7 @@ export default function Mission() {
       setConflict(null);
       router.replace('/(main)/home');
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('마무리하지 못했어요', friendlyErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -125,10 +167,37 @@ export default function Mission() {
         </View>
         <View style={styles.loadingBody}>
           <View style={styles.loadingOrb}>
-            <Maedeubi size={104} breathe variant="think" />
+            <Maedeubi
+              size={104}
+              breathe
+              variant={genError || genTimedOut ? 'comfort' : 'think'}
+            />
           </View>
-          <Text style={styles.loadingText}>매듭이가 미션 페이퍼를 준비하고 있어요…</Text>
-          <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
+          {genError || genTimedOut ? (
+            <>
+              <Text style={styles.loadingText}>
+                {genError
+                  ? `미션을 만들지 못했어요.\n${genError}`
+                  : '미션을 만들지 못했어요.\n다시 시도해볼까요?'}
+              </Text>
+              <Pressable
+                onPress={onRetryGenerate}
+                disabled={retryingGen}
+                style={styles.retryButton}
+                accessibilityRole="button"
+                accessibilityLabel="미션 만들기 다시 시도"
+              >
+                <Text style={styles.retryText}>
+                  {retryingGen ? '다시 만드는 중…' : '다시 시도'}
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.loadingText}>매듭이가 미션 페이퍼를 준비하고 있어요…</Text>
+              <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
+            </>
+          )}
         </View>
       </View>
     );
@@ -231,6 +300,11 @@ const styles = StyleSheet.create({
   loadingOrb: { marginBottom: 28 },
   loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
+  retryButton: {
+    ...ui.pill,
+    marginTop: 26,
+  },
+  retryText: { ...ui.pillText, fontSize: 13, color: colors.ink2 },
   scroll: { padding: 24, paddingBottom: 48 },
   titleRow: {
     flexDirection: 'row',

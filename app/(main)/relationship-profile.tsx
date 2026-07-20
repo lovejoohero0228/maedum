@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { upsertRelationshipProfile } from '@/services/relationshipProfileService';
 import { requestReferenceBank } from '@/lib/ai';
 import { showAlert } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { ChoiceSelector, DIRECT_INPUT } from '@/components/chat/ChoiceSelector';
 import { Maedeubi } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
@@ -67,6 +68,9 @@ export default function RelationshipProfileScreen() {
   const needsDuration = relationshipType ? NEEDS_DURATION.includes(relationshipType) : false;
   const durationLabel =
     RELATIONSHIP_DURATION_PRESETS.find((p) => p.months === durationMonths)?.label ?? null;
+  // 직접 입력으로 정한 개월 수 — 프리셋에 없는 값이면 "N개월" 칩으로 보여준다
+  const customDurationLabel =
+    durationMonths != null && !durationLabel ? `${durationMonths}개월` : null;
 
   const toggle = (setter: typeof setMyTags, list: string[], value: string) =>
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -80,6 +84,13 @@ export default function RelationshipProfileScreen() {
     if (preset) {
       setDurationMonths(preset.months);
       setShowDurationInput(false);
+      return;
+    }
+    // 직접 입력으로 만든 "N개월" 칩을 다시 탭한 경우
+    const custom = /^(\d+)개월$/.exec(value);
+    if (custom) {
+      setDurationMonths(Number(custom[1]));
+      setShowDurationInput(false);
     }
   };
 
@@ -89,6 +100,11 @@ export default function RelationshipProfileScreen() {
   // 갤러리에서 사진을 골라 Supabase Storage에 업로드 → 공개 URL을 배경값으로
   const onPickImage = async () => {
     if (!session || uploading) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showAlert('사진 접근 권한이 필요해요', '설정에서 허용해주세요.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
@@ -109,7 +125,7 @@ export default function RelationshipProfileScreen() {
       const { data } = supabase.storage.from('backgrounds').getPublicUrl(path);
       setHomeBackground(urlValue(data.publicUrl));
     } catch (e) {
-      showAlert('업로드 실패', String(e));
+      showAlert('업로드 실패', friendlyErrorMessage(e, '사진을 올리지 못했어요. 잠시 후 다시 시도해주세요.'));
     } finally {
       setUploading(false);
     }
@@ -170,11 +186,23 @@ export default function RelationshipProfileScreen() {
       <Wash />
       <View style={styles.header}>
         {step > 1 ? (
-          <Pressable onPress={() => setStep(step - 1)} hitSlop={8}>
+          <Pressable
+            onPress={() => setStep(step - 1)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="이전 단계로"
+          >
             <Text style={styles.back}>←</Text>
           </Pressable>
         ) : (
-          <View style={{ width: 24 }} />
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+          >
+            <Text style={styles.back}>✕</Text>
+          </Pressable>
         )}
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
@@ -199,8 +227,11 @@ export default function RelationshipProfileScreen() {
                   만난 지 얼마나 됐나요?
                 </Text>
                 <ChoiceSelector
-                  choices={RELATIONSHIP_DURATION_PRESETS.map((p) => p.label)}
-                  selected={showDurationInput ? null : durationLabel}
+                  choices={[
+                    ...RELATIONSHIP_DURATION_PRESETS.map((p) => p.label),
+                    ...(customDurationLabel ? [customDurationLabel] : []),
+                  ]}
+                  selected={showDurationInput ? null : durationLabel ?? customDurationLabel}
                   onSelect={onSelectDuration}
                   allowDirectInput
                   color={myColor()}
@@ -220,8 +251,17 @@ export default function RelationshipProfileScreen() {
                       style={styles.durationConfirm}
                       onPress={() => {
                         const n = Number(durationText);
-                        if (n > 0) setDurationMonths(n);
+                        if (Number.isInteger(n) && n > 0) {
+                          // 확인 즉시 "N개월" 칩이 선택된 상태로 보이게 입력창을 닫는다
+                          setDurationMonths(n);
+                          setShowDurationInput(false);
+                          setDurationText('');
+                        } else {
+                          showAlert('개월 수를 확인해주세요', '1 이상의 숫자로 입력해주세요.');
+                        }
                       }}
+                      accessibilityRole="button"
+                      accessibilityLabel="개월 수 입력 확인"
                     >
                       <Text style={styles.durationConfirmText}>확인</Text>
                     </Pressable>
@@ -260,13 +300,14 @@ export default function RelationshipProfileScreen() {
         {step === 3 ? (
           <>
             <Text style={styles.question}>나는 어떤 성격인 것 같나요?</Text>
-            <Text style={styles.hint}>여러 개 골라도 돼요</Text>
+            <Text style={styles.hint}>여러 개 골라도 돼요. 없다면 그대로 넘어가도 괜찮아요.</Text>
             <ChoiceSelector
               choices={PERSONALITY_TAGS}
               selected={null}
               onSelect={() => {}}
               color={myColor()}
               multiple
+              minSelected={0}
               selectedValues={myTags}
               onToggle={(v) => toggle(setMyTags, myTags, v)}
               onSubmit={() => setStep(4)}
@@ -277,13 +318,14 @@ export default function RelationshipProfileScreen() {
         {step === 4 ? (
           <>
             <Text style={styles.question}>내가 보는 상대는 어떤 사람인가요?</Text>
-            <Text style={styles.hint}>여러 개 골라도 돼요</Text>
+            <Text style={styles.hint}>여러 개 골라도 돼요. 없다면 그대로 넘어가도 괜찮아요.</Text>
             <ChoiceSelector
               choices={PERSONALITY_TAGS}
               selected={null}
               onSelect={() => {}}
               color={myColor()}
               multiple
+              minSelected={0}
               selectedValues={partnerTags}
               onToggle={(v) => toggle(setPartnerTags, partnerTags, v)}
               onSubmit={() => setStep(5)}
@@ -294,13 +336,14 @@ export default function RelationshipProfileScreen() {
         {step === 5 ? (
           <>
             <Text style={styles.question}>자주 부딪히는 주제가 있다면?</Text>
-            <Text style={styles.hint}>여러 개 골라도 돼요</Text>
+            <Text style={styles.hint}>여러 개 골라도 돼요. 없다면 그대로 넘어가도 괜찮아요.</Text>
             <ChoiceSelector
               choices={CONFLICT_TOPICS}
               selected={null}
               onSelect={() => {}}
               color={myColor()}
               multiple
+              minSelected={0}
               selectedValues={topics}
               onToggle={(v) => toggle(setTopics, topics, v)}
               onSubmit={() => setStep(6)}
@@ -342,7 +385,13 @@ export default function RelationshipProfileScreen() {
                 </Pressable>
               </View>
             ) : null}
-            <Pressable style={styles.uploadButton} onPress={onPickImage} disabled={uploading}>
+            <Pressable
+              style={styles.uploadButton}
+              onPress={onPickImage}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityLabel="내 사진을 배경으로 사용하기"
+            >
               <Text style={ui.pillText}>
                 {uploading ? '업로드 중…' : '내 사진 사용하기'}
               </Text>

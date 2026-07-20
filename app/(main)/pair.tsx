@@ -1,13 +1,17 @@
 // 커플 연결 — 초대 코드 생성 / 입력 (Phase 1)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { acceptInviteCode, createInviteCode } from '@/services/conflictService';
@@ -24,6 +28,16 @@ export default function Pair() {
   const [myCode, setMyCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // "복사됐어요" 표시 타이머 정리
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
 
   // 초대 코드 생성 후, 상대가 수락하면 accept_couple_invite()가 couples row를
   // (user_a_id: 나=inviter, user_b_id: 상대)로 만든다. 예전엔 이 이벤트를 아무도
@@ -87,11 +101,44 @@ export default function Pair() {
     try {
       const code = await createInviteCode(session.user.id);
       setMyCode(code);
+      setCopied(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e);
       showAlert('코드 생성 실패', msg);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onCopyCode = async () => {
+    if (!myCode) return;
+    try {
+      await Clipboard.setStringAsync(myCode);
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showAlert('복사 실패', '코드를 복사하지 못했어요. 다시 시도해주세요.');
+    }
+  };
+
+  const onShareCode = async () => {
+    if (!myCode) return;
+    const message = `맺음에서 나랑 연결해줘! 초대 코드: ${myCode}`;
+    if (Platform.OS === 'web') {
+      // 웹은 공유 시트가 없는 환경이 많아 복사로 대체
+      try {
+        await Clipboard.setStringAsync(message);
+        showAlert('복사됐어요', '초대 메시지를 붙여넣어 상대에게 보내주세요.');
+      } catch {
+        showAlert('공유 실패', '초대 메시지를 복사하지 못했어요. 코드를 직접 알려주세요.');
+      }
+      return;
+    }
+    try {
+      await Share.share({ message });
+    } catch {
+      // 공유 시트를 닫은 경우 등 — 조용히 무시
     }
   };
 
@@ -117,9 +164,45 @@ export default function Pair() {
           {myCode ? (
             <>
               <Text style={styles.code}>{myCode}</Text>
+              <View style={styles.codeActions}>
+                <Pressable
+                  style={styles.pillButton}
+                  onPress={onCopyCode}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대 코드 복사"
+                >
+                  <Text style={ui.pillText}>{copied ? '복사됐어요' : '복사'}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.pillButton}
+                  onPress={onShareCode}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대 코드 공유"
+                >
+                  <Text style={ui.pillText}>공유</Text>
+                </Pressable>
+              </View>
               <Text style={styles.hint}>
-                이 코드를 상대에게 알려주세요.{'\n'}상대가 입력하면 자동으로 연결돼요.
+                이 코드를 상대에게 알려주세요.{'\n'}
+                상대가 아직 맺음 계정이 없다면 먼저 가입한 뒤 코드를 입력하면 돼요.
               </Text>
+              <View style={styles.waitingRow}>
+                <ActivityIndicator size="small" color={colors.ink3} />
+                <Text style={styles.waitingText}>
+                  코드는 7일 동안 유효해요 · 상대가 입력하면 자동으로 연결돼요
+                </Text>
+              </View>
+              <Pressable
+                onPress={onCreate}
+                disabled={busy}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="초대 코드 새로 만들기"
+              >
+                <Text style={styles.regenLink}>
+                  {busy ? '만드는 중…' : '코드 새로 만들기'}
+                </Text>
+              </Pressable>
             </>
           ) : (
             <Pressable style={styles.pillButton} onPress={onCreate} disabled={busy}>
@@ -184,6 +267,32 @@ const styles = StyleSheet.create({
   },
   pillButton: {
     ...ui.pill,
+    alignSelf: 'flex-start',
+  },
+  codeActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  waitingText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.ink3,
+    fontFamily: fonts.body,
+    flexShrink: 1,
+  },
+  regenLink: {
+    fontSize: 12,
+    color: colors.ink3,
+    textDecorationLine: 'underline',
+    fontFamily: fonts.body,
+    marginTop: 14,
     alignSelf: 'flex-start',
   },
   input: {

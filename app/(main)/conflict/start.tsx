@@ -7,6 +7,7 @@ import { useConflictStore } from '@/store/conflictStore';
 import { startConflict, joinConflict } from '@/services/conflictService';
 import { sendPushTo } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { Maedeubi } from '@/components/ui/Maedeubi';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
 import { Wash } from '@/components/ui/Wash';
@@ -45,7 +46,7 @@ export default function Start() {
       }
       router.replace('/(main)/conflict/input');
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('시작하지 못했어요', friendlyErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -54,16 +55,19 @@ export default function Start() {
   return (
     <View style={styles.container}>
       <Wash />
+      {/* 뒤로 가는 길은 ← 하나로 충분하다 — "다음에" 중복 버튼은 제거 */}
       <View style={styles.topNav}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+        >
           <Text style={styles.back}>←</Text>
         </Pressable>
         <View style={styles.progressWrap}>
           <ProgressSteps current={1} />
         </View>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.skip}>다음에</Text>
-        </Pressable>
       </View>
 
       <View style={styles.body}>
@@ -91,6 +95,9 @@ export default function Start() {
         onPress={onBegin}
         disabled={busy}
         style={[styles.begin, busy && styles.beginBusy]}
+        accessibilityRole="button"
+        accessibilityLabel={partnerInitiated ? '함께 시작하기' : '시작하기'}
+        accessibilityState={{ disabled: busy }}
       >
         <Text style={ui.primaryPillText}>
           {busy ? '준비 중…' : partnerInitiated ? '함께 시작하기' : '시작하기'}
@@ -105,7 +112,6 @@ const styles = StyleSheet.create({
   topNav: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   back: { fontSize: 20, color: colors.ink },
   progressWrap: { flex: 1 },
-  skip: { fontSize: 14, color: colors.ink2, fontFamily: fonts.body },
   body: { flex: 1, paddingTop: 24 },
   charWrap: { marginBottom: 18 },
   title: {

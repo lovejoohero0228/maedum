@@ -13,6 +13,7 @@ import { colors, fonts, ui } from '@/constants/colors';
 export default function Profile() {
   const session = useConflictStore((s) => s.session);
   const profile = useConflictStore((s) => s.profile);
+  const couple = useConflictStore((s) => s.couple);
   const couples = useConflictStore((s) => s.couples);
   const partners = useConflictStore((s) => s.partners);
   const myColor = useConflictStore((s) => s.myColor);
@@ -28,12 +29,19 @@ export default function Profile() {
 
   const onUnpair = async (coupleId: string, partnerName: string) => {
     if (unpairingId) return;
-    const ok = await showConfirm(
+    // 되돌릴 수 없는 파괴적 작업이라 두 번 확인한다
+    const first = await showConfirm(
       `${partnerName}님과의 연결을 해제할까요?`,
-      '지금까지 함께 나눈 맺음 기록이 모두 삭제되고, 되돌릴 수 없어요.',
+      '지금까지 함께 나눈 맺음 기록이 모두 삭제돼요.\n상대에게는 따로 알림이 가지 않아요.',
+      '계속',
+    );
+    if (!first) return;
+    const second = await showConfirm(
+      '정말 해제할까요?',
+      '모든 맺음 기록이 삭제되고 복구할 수 없어요.',
       '연결 해제',
     );
-    if (!ok) return;
+    if (!second) return;
     setUnpairingId(coupleId);
     try {
       await unpairCouple(coupleId);
@@ -80,16 +88,18 @@ export default function Profile() {
         </Pressable>
       ) : null}
 
-      <Pressable
-        style={[styles.card, styles.rowCard]}
-        onPress={() => router.push('/(main)/relationship-profile')}
-      >
-        <View style={styles.rowBody}>
-          <Text style={styles.cardLabel}>관계 정보</Text>
-          <Text style={styles.rowTitle}>관계 정보 수정</Text>
-        </View>
-        <Text style={styles.arrow}>→</Text>
-      </Pressable>
+      {couple ? (
+        <Pressable
+          style={[styles.card, styles.rowCard]}
+          onPress={() => router.push('/(main)/relationship-profile')}
+        >
+          <View style={styles.rowBody}>
+            <Text style={styles.cardLabel}>관계 정보</Text>
+            <Text style={styles.rowTitle}>관계 정보 수정</Text>
+          </View>
+          <Text style={styles.arrow}>→</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>연결된 상대</Text>

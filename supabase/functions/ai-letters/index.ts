@@ -8,6 +8,7 @@
 import {
   openaiClient,
   adminClient,
+  userClient,
   AI_MODEL,
   corsHeaders,
   json,
@@ -62,22 +63,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // service_role 전용 (ai-input 내부 호출)
-    const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)) {
-      return json({ error: "forbidden" }, 403);
-    }
-
     const { conflict_id } = await req.json();
     const admin = adminClient();
-
-    // 이미 생성됐으면 멱등 반환
-    const { data: existing } = await admin
-      .from("conflict_outputs")
-      .select("id")
-      .eq("conflict_id", conflict_id)
-      .maybeSingle();
-    if (existing) return json({ ok: true, already: true });
 
     const { data: conflict } = await admin
       .from("conflicts")
@@ -92,6 +79,28 @@ Deno.serve(async (req) => {
       .eq("id", conflict.couple_id)
       .single();
     if (!couple) return json({ error: "couple not found" }, 404);
+
+    // 호출 권한: service_role(ai-input 내부 호출) 또는 이 커플의 당사자.
+    // 당사자 호출을 허용하는 이유 — 자동 트리거가 실패해 ai_processing에 갇혔을 때
+    // waiting 화면의 "다시 시도"가 이 함수를 멱등 재호출할 수 있어야 한다.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const isService = authHeader.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    if (!isService) {
+      const { data: auth } = await userClient(req).auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid || (uid !== couple.user_a_id && uid !== couple.user_b_id)) {
+        return json({ error: "forbidden" }, 403);
+      }
+      // 당사자 재시도는 양쪽 입력이 모두 완료된 뒤에만 의미가 있다
+    }
+
+    // 이미 생성됐으면 멱등 반환
+    const { data: existing } = await admin
+      .from("conflict_outputs")
+      .select("id")
+      .eq("conflict_id", conflict_id)
+      .maybeSingle();
+    if (existing) return json({ ok: true, already: true });
 
     const { data: inputs } = await admin
       .from("conflict_inputs")

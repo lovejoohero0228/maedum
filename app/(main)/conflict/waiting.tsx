@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
+import { requestLetters } from '@/lib/ai';
 import { restartFromField } from '@/services/aiInputService';
 import { Maedeubi } from '@/components/ui/Maedeubi';
 import { ProgressSteps } from '@/components/ui/ProgressSteps';
@@ -20,6 +22,11 @@ export default function Waiting() {
   const setConflict = useConflictStore((s) => s.setConflict);
   const refreshConflict = useConflictStore((s) => s.refreshConflict);
   const [restarting, setRestarting] = useState(false);
+  // ai_processing에서 서버 측 생성이 조용히 실패하면 영원히 스피너에 갇힌다 —
+  // 90초가 지나면 "다시 시도"(멱등 requestLetters)를 노출한다.
+  const [processingTimedOut, setProcessingTimedOut] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     if (!conflict) return;
@@ -61,6 +68,34 @@ export default function Waiting() {
   }, [conflict, setConflict, refreshConflict]);
 
   const isProcessing = conflict?.status === 'ai_processing';
+  // 아직 상대가 참여조차 안 한 상태 — "상대도 정리 중" 문구가 거짓말이 되지 않도록 구분
+  const partnerNotJoined = conflict?.status === 'waiting_partner';
+
+  // ai_processing 타임아웃 타이머 — 상태가 바뀌거나 재시도할 때마다 다시 잰다
+  useEffect(() => {
+    if (!isProcessing) {
+      setProcessingTimedOut(false);
+      return;
+    }
+    setProcessingTimedOut(false);
+    const timer = setTimeout(() => setProcessingTimedOut(true), 90000);
+    return () => clearTimeout(timer);
+  }, [isProcessing, retryAttempt]);
+
+  // 편지 생성 재시도 — requestLetters는 멱등이라 이미 생성돼 있으면 서버가 no-op
+  const onRetryLetters = async () => {
+    if (!conflict || retrying) return;
+    setRetrying(true);
+    try {
+      await requestLetters(conflict.id);
+      await refreshConflict();
+      setRetryAttempt((n) => n + 1);
+    } catch (e) {
+      showAlert('다시 시도하지 못했어요', friendlyErrorMessage(e));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   // 아직 상대가 입력 중일 때만 — 내 응답을 초기화하고 입력 화면으로 되돌아간다.
   // 상대의 응답에는 영향이 없다. (편지 생성이 시작되면 서비스 단에서 거부된다)
@@ -77,7 +112,7 @@ export default function Waiting() {
       await restartFromField(conflict.id, session.user.id, FIELD_ORDER[0]);
       router.replace('/(main)/conflict/input');
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('다시 작성하지 못했어요', friendlyErrorMessage(e));
       setRestarting(false);
     }
   };
@@ -95,22 +130,48 @@ export default function Waiting() {
         </View>
         <Text style={styles.title}>
           {isProcessing
-            ? '매듭이가 두 사람의 편지를 쓰고 있어요'
+            ? processingTimedOut
+              ? '생각보다 오래 걸리고 있어요'
+              : '매듭이가 두 사람의 편지를 쓰고 있어요'
             : `${partner?.display_name ?? '상대'}의 마음을 기다리는 중`}
         </Text>
         <Text style={styles.desc}>
           {isProcessing
-            ? '날것의 감정을 전달 가능한 언어로 바꾸는 중이에요.\n매듭이가 두 마음을 잇고 있으니, 잠시만 기다려주세요.'
-            : '상대도 지금 속마음을 정리하고 있어요.\n둘 다 완료되면 편지가 도착해요.'}
+            ? processingTimedOut
+              ? '편지 생성이 조금 지연되고 있어요.\n아래 버튼을 누르면 매듭이가 이어서 작업해요.'
+              : '날것의 감정을 전달 가능한 언어로 바꾸는 중이에요.\n매듭이가 두 마음을 잇고 있으니, 잠시만 기다려주세요.'
+            : partnerNotJoined
+              ? '아직 상대가 시작하지 않았어요.\n알림을 받고 들어오면 함께 진행돼요.'
+              : '상대도 지금 속마음을 정리하고 있어요.\n둘 다 완료되면 편지가 도착해요.'}
         </Text>
         <ActivityIndicator size="small" color={colors.ink3} style={styles.spinner} />
-        {!isProcessing ? (
-          <Pressable onPress={onRestart} disabled={restarting} style={styles.restartButton}>
+        {isProcessing ? (
+          processingTimedOut ? (
+            <Pressable
+              onPress={onRetryLetters}
+              disabled={retrying}
+              style={styles.restartButton}
+              accessibilityRole="button"
+              accessibilityLabel="편지 생성 다시 시도"
+            >
+              <Text style={styles.restartText}>
+                {retrying ? '다시 시도하는 중…' : '다시 시도'}
+              </Text>
+            </Pressable>
+          ) : null
+        ) : (
+          <Pressable
+            onPress={onRestart}
+            disabled={restarting}
+            style={styles.restartButton}
+            accessibilityRole="button"
+            accessibilityLabel="내 응답 다시 작성하기"
+          >
             <Text style={styles.restartText}>
               {restarting ? '초기화 중…' : '내 응답 다시 작성하기'}
             </Text>
           </Pressable>
-        ) : null}
+        )}
       </View>
     </View>
   );

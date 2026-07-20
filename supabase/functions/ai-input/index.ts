@@ -134,6 +134,11 @@ function envelopeViolation(
   fieldKey: string,
   chatLog: ChatEntry[],
 ): string | null {
+  // gpt-4o가 message 키를 통째로 누락하는 사례가 실제로 관측됨 — 빈 말풍선은
+  // 사용자에게 "AI가 뭘 물었는지 알 수 없는" 데드엔드라 반드시 반려한다.
+  if (!envelope.message.trim()) {
+    return "message가 비어 있음 — 사용자에게 보일 공감/질문 문장을 반드시 채워야 함";
+  }
   if (envelope.field_complete) {
     return envelope.extracted_value ? null : "field_complete인데 extracted_value가 비어 있음";
   }
@@ -421,6 +426,13 @@ async function generateEnvelope(
   // - choice_groups 없는 질문은 클라이언트가 자유입력 폴백을 띄우므로 그대로 내보낸다 (500보다 낫다).
   if (envelope.field_complete && !envelope.extracted_value) {
     envelope.field_complete = false;
+  }
+  // 재시도까지 message가 계속 비면 고정 문구로라도 채운다 — 빈 말풍선은 데드엔드이고
+  // chat_log에 영구 저장되므로 500보다도, 빈 문자열보다도 폴백 문구가 낫다.
+  if (!envelope.message.trim()) {
+    envelope.message = envelope.field_complete
+      ? "잘 정리됐어요. 다음 이야기로 넘어가볼게요."
+      : "방금 이야기를 조금만 더 자세히 들려줄 수 있을까요?";
   }
   return envelope;
 }

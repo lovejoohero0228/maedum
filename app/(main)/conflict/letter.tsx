@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { showAlert } from '@/lib/alert';
+import { showAlert, showConfirm } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
+import { requestLetters } from '@/lib/ai';
 import { useConflictStore } from '@/store/conflictStore';
 import { letterForMe, letterFromMe } from '@/services/aiLetterService';
 import { parseAnalysis } from '@/services/aiAnalysisService';
@@ -39,6 +41,10 @@ export default function Letter() {
   const [iAmReady, setIAmReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [letterTab, setLetterTab] = useState<'received' | 'sent'>('received');
+  // 폴링이 60초 넘게 빈손이면 무한 스피너 대신 "다시 시도"를 노출한다
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   // 편지/분석 로드 — 단발 호출이 실패하거나(네트워크/일시 오류) 생성 직후 타이밍이 어긋나면
   // 영원히 로딩에 갇히므로, outputs가 도착할 때까지 짧은 간격으로 재시도한다.
@@ -54,6 +60,32 @@ export default function Letter() {
     }, 2500);
     return () => clearInterval(timer);
   }, [loadOutputs]);
+
+  // 로딩 타임아웃 타이머 — outputs가 도착하거나 재시도할 때마다 다시 잰다
+  useEffect(() => {
+    if (outputs) {
+      setLoadTimedOut(false);
+      return;
+    }
+    setLoadTimedOut(false);
+    const timer = setTimeout(() => setLoadTimedOut(true), 60000);
+    return () => clearTimeout(timer);
+  }, [outputs, retryAttempt]);
+
+  // 편지 생성/조회 재시도 — requestLetters는 멱등이라 이미 생성돼 있으면 서버가 no-op
+  const onRetryLetters = async () => {
+    if (!conflict || retrying) return;
+    setRetrying(true);
+    try {
+      await requestLetters(conflict.id);
+      await loadOutputs();
+      setRetryAttempt((n) => n + 1);
+    } catch (e) {
+      showAlert('편지를 불러오지 못했어요', friendlyErrorMessage(e));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   // 내 갈등 크기 수치 (IntensityBar용)
   useEffect(() => {
@@ -112,13 +144,20 @@ export default function Letter() {
 
   const onReady = async () => {
     if (!conflict || !session || busy) return;
+    // 한번 누르면 되돌릴 수 없으므로 확인을 거친다
+    const ok = await showConfirm(
+      '준비됐다고 알릴까요?',
+      '상대도 준비되면 미션 페이퍼가 열려요. 누른 뒤에는 되돌릴 수 없어요.',
+      '알릴게요',
+    );
+    if (!ok) return;
     setBusy(true);
     try {
       const count = await markReady(conflict.id, session.user.id);
       setIAmReady(true);
       if (count >= 2) goMission();
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('전달하지 못했어요', friendlyErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -128,11 +167,41 @@ export default function Letter() {
     return (
       <View style={[styles.container, styles.loading]}>
         <Wash variant="pink" />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={styles.loadingBack}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+        >
+          <Text style={styles.loadingBackText}>←</Text>
+        </Pressable>
         <View style={styles.loadingOrb}>
           <Maedeubi size={96} breathe variant="letter" />
         </View>
-        <Text style={styles.loadingText}>매듭이가 편지를 가져오는 중…</Text>
-        <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
+        {loadTimedOut ? (
+          <>
+            <Text style={styles.loadingText}>
+              생각보다 오래 걸리고 있어요.{'\n'}다시 시도해볼까요?
+            </Text>
+            <Pressable
+              onPress={onRetryLetters}
+              disabled={retrying}
+              style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel="편지 불러오기 다시 시도"
+            >
+              <Text style={styles.retryText}>
+                {retrying ? '다시 시도하는 중…' : '다시 시도'}
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.loadingText}>매듭이가 편지를 가져오는 중…</Text>
+            <ActivityIndicator size="small" color={colors.ink3} style={styles.loadingSpinner} />
+          </>
+        )}
       </View>
     );
   }
@@ -188,7 +257,11 @@ export default function Letter() {
                 body={receivedLetter}
                 senderColor={partnerColor}
               />
-            ) : null}
+            ) : (
+              <Text style={styles.letterMissing}>
+                편지를 아직 불러오지 못했어요. 잠시 후 다시 확인해주세요.
+              </Text>
+            )}
           </>
         ) : (
           <>
@@ -202,7 +275,11 @@ export default function Letter() {
                 body={sentLetter}
                 senderColor={myColor()}
               />
-            ) : null}
+            ) : (
+              <Text style={styles.letterMissing}>
+                편지를 아직 불러오지 못했어요. 잠시 후 다시 확인해주세요.
+              </Text>
+            )}
           </>
         )}
 
@@ -275,9 +352,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingTop: 48 },
   progressHeader: { paddingHorizontal: 24 },
   loading: { alignItems: 'center', justifyContent: 'center' },
+  loadingBack: { position: 'absolute', top: 56, left: 24 },
+  loadingBackText: { fontSize: 20, color: colors.ink },
   loadingOrb: { marginBottom: 28 },
   loadingText: { ...ui.statementSub, textAlign: 'center' },
   loadingSpinner: { marginTop: 28, opacity: 0.7 },
+  retryButton: {
+    ...ui.pill,
+    marginTop: 26,
+  },
+  retryText: { ...ui.pillText, fontSize: 13, color: colors.ink2 },
+  letterMissing: {
+    ...ui.card,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.ink3,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
   letterTabs: {
     flexDirection: 'row',
     justifyContent: 'center',

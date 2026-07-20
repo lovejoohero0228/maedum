@@ -1,7 +1,17 @@
 // 튜토리얼 — 맺음의 흐름과 6개 입력 단계를 페이지별로 소개
 // 가입 온보딩(profile-setup) 직후 자동 진입, 홈 하단 '튜토리얼' 링크로 언제든 다시 볼 수 있다
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Maedeubi, type MaedeubiVariant } from '@/components/ui/Maedeubi';
 import { Wash } from '@/components/ui/Wash';
@@ -98,9 +108,9 @@ const PAGES: TutorialPage[] = [
 
 export default function Tutorial() {
   const [page, setPage] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList<TutorialPage>>(null);
+  const { width } = useWindowDimensions();
   const isLast = page === PAGES.length - 1;
-  const current = PAGES[page];
 
   // 홈에서 다시 열었을 땐 뒤로, 가입 직후(스택 첫 화면)엔 홈으로
   const finish = () => {
@@ -108,19 +118,28 @@ export default function Tutorial() {
     else router.replace('/(main)/home');
   };
 
+  const goTo = (next: number) => {
+    setPage(next);
+    listRef.current?.scrollToIndex({ index: next, animated: true });
+  };
+
   const onNext = () => {
     if (isLast) {
       finish();
       return;
     }
-    setPage(page + 1);
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    goTo(page + 1);
   };
 
   const onBack = () => {
     if (page === 0) return;
-    setPage(page - 1);
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    goTo(page - 1);
+  };
+
+  // 스와이프로 페이지를 넘겼을 때 점/버튼을 따라오게 한다
+  const onMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const next = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (next !== page && next >= 0 && next < PAGES.length) setPage(next);
   };
 
   return (
@@ -148,28 +167,41 @@ export default function Tutorial() {
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.charWrap}>
-          <Maedeubi size={88} variant={current.variant} breathe />
-        </View>
-        {current.chip ? (
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>{current.chip}</Text>
-          </View>
-        ) : null}
-        <Text style={ui.statement}>{current.title}</Text>
-        <Text style={styles.body}>{current.body}</Text>
-        {current.example ? (
-          <View style={styles.exampleCard}>
-            <Text style={styles.exampleLabel}>{current.example.label}</Text>
-            <Text style={styles.exampleText}>{current.example.text}</Text>
-          </View>
-        ) : null}
-      </ScrollView>
+      <FlatList
+        ref={listRef}
+        data={PAGES}
+        keyExtractor={(_, i) => String(i)}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+        style={styles.pager}
+        renderItem={({ item }) => (
+          <ScrollView
+            style={{ width }}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.charWrap}>
+              <Maedeubi size={88} variant={item.variant} breathe />
+            </View>
+            {item.chip ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{item.chip}</Text>
+              </View>
+            ) : null}
+            <Text style={ui.statement}>{item.title}</Text>
+            <Text style={styles.body}>{item.body}</Text>
+            {item.example ? (
+              <View style={styles.exampleCard}>
+                <Text style={styles.exampleLabel}>{item.example.label}</Text>
+                <Text style={styles.exampleText}>{item.example.text}</Text>
+              </View>
+            ) : null}
+          </ScrollView>
+        )}
+      />
 
       <View style={styles.footer}>
         <View style={styles.dots}>
@@ -198,6 +230,7 @@ const styles = StyleSheet.create({
   backPlaceholder: { width: 22 },
   skip: { ...ui.quietCta, color: colors.ink3 },
   progressWrap: { paddingHorizontal: 24, marginBottom: 24 },
+  pager: { flex: 1 },
   scroll: { paddingHorizontal: 24, paddingBottom: 24 },
   charWrap: { alignItems: 'flex-start', marginBottom: 20 },
   chip: {

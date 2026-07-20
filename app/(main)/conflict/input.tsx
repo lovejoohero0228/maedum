@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import { useConflictStore } from '@/store/conflictStore';
 import { showAlert, showConfirm } from '@/lib/alert';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { answerField, getMyInput, restartFromField, startField } from '@/services/aiInputService';
 import { Wash } from '@/components/ui/Wash';
 import { Maedeubi } from '@/components/ui/Maedeubi';
@@ -57,12 +58,28 @@ interface Bubble {
 }
 
 function bubblesFromLog(chatLog: ChatEntry[]): Bubble[] {
-  return chatLog.map((e) => ({
-    role: e.role,
-    content: e.content,
-    choiceGroups: e.choice_groups ?? null,
-    selections: e.selections ?? null,
-  }));
+  // 앱이 죽는 등으로 같은 질문이 로그에 연달아 두 번 남았으면 화면에는 한 번만 보여준다
+  const out: Bubble[] = [];
+  let prevKept: ChatEntry | null = null;
+  for (const e of chatLog) {
+    if (
+      prevKept &&
+      e.role === 'assistant' &&
+      prevKept.role === 'assistant' &&
+      e.content === prevKept.content &&
+      e.field === prevKept.field
+    ) {
+      continue;
+    }
+    out.push({
+      role: e.role,
+      content: e.content,
+      choiceGroups: e.choice_groups ?? null,
+      selections: e.selections ?? null,
+    });
+    prevKept = e;
+  }
+  return out;
 }
 
 // 저장된 입력에서 다음 수집 항목 계산
@@ -97,6 +114,8 @@ export default function Input() {
   const [text, setText] = useState('');
   const [showTextInput, setShowTextInput] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  // 초기 로드/복원이 실패했을 때 채팅 안에 "다시 시도"를 띄우기 위한 상태
+  const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const startedRef = useRef(false);
 
@@ -171,56 +190,68 @@ export default function Input() {
     [applyResponse, applyEnvelope, pushAssistant, conflict],
   );
 
-  // 초기 로드: 저장된 대화 복원 + 현재 항목 첫 질문
+  // 초기 로드: 저장된 대화 복원 + 현재 항목 첫 질문.
+  // 실패해도 막다른 화면이 되지 않도록 loadError를 세팅하고, "다시 시도"에서 재호출한다.
+  const loadConversation = useCallback(async () => {
+    if (!conflict || !session) return;
+    setLoadError(null);
+    try {
+      const saved = await getMyInput(conflict.id, session.user.id);
+      if (saved?.is_complete) {
+        router.replace('/(main)/conflict/waiting');
+        return;
+      }
+      const chatLog = saved?.chat_log ?? [];
+      setBubbles(bubblesFromLog(chatLog));
+      const current = nextFieldFrom(saved);
+      setField(current);
+
+      // 이미 이 항목에 대한 대화가 시작된 상태라면(새로고침 등으로 재진입) —
+      // startField를 다시 호출하면 AI가 "첫 질문"부터 새로 던져서 진행이 리셋된 것처럼 보인다.
+      // 마지막 로그가 이미 AI의 질문(답변 대기 중)이면 그대로 두고 사용자 입력만 받는다 —
+      // 선택지 그룹이 있던 질문이면 그룹도 함께 복원한다.
+      const hasFieldHistory = chatLog.some((e: ChatEntry) => e.field === current);
+      const lastEntry = chatLog[chatLog.length - 1];
+      if (hasFieldHistory && lastEntry?.role === 'assistant') {
+        if (lastEntry.choice_groups?.length) {
+          setGroups(lastEntry.choice_groups);
+          setGroupSelections(lastEntry.choice_groups.map(() => []));
+          setCustomChoices(lastEntry.choice_groups.map(() => []));
+          setShowTextInput(false);
+        } else {
+          setShowTextInput(true);
+        }
+        return;
+      }
+
+      setWaiting(true);
+      const res = await startField(conflict.id, current);
+      await handleResponse(res);
+    } catch (e) {
+      setLoadError(friendlyErrorMessage(e, '대화를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'));
+    } finally {
+      setWaiting(false);
+    }
+  }, [conflict, session, handleResponse]);
+
   useEffect(() => {
     if (!conflict || !session || startedRef.current) return;
     startedRef.current = true;
-
-    (async () => {
-      try {
-        const saved = await getMyInput(conflict.id, session.user.id);
-        if (saved?.is_complete) {
-          router.replace('/(main)/conflict/waiting');
-          return;
-        }
-        const chatLog = saved?.chat_log ?? [];
-        if (chatLog.length) {
-          setBubbles(bubblesFromLog(chatLog));
-        }
-        const current = nextFieldFrom(saved);
-        setField(current);
-
-        // 이미 이 항목에 대한 대화가 시작된 상태라면(새로고침 등으로 재진입) —
-        // startField를 다시 호출하면 AI가 "첫 질문"부터 새로 던져서 진행이 리셋된 것처럼 보인다.
-        // 마지막 로그가 이미 AI의 질문(답변 대기 중)이면 그대로 두고 사용자 입력만 받는다 —
-        // 선택지 그룹이 있던 질문이면 그룹도 함께 복원한다.
-        const hasFieldHistory = chatLog.some((e: ChatEntry) => e.field === current);
-        const lastEntry = chatLog[chatLog.length - 1];
-        if (hasFieldHistory && lastEntry?.role === 'assistant') {
-          if (lastEntry.choice_groups?.length) {
-            setGroups(lastEntry.choice_groups);
-            setGroupSelections(lastEntry.choice_groups.map(() => []));
-            setCustomChoices(lastEntry.choice_groups.map(() => []));
-            setShowTextInput(false);
-          } else {
-            setShowTextInput(true);
-          }
-          return;
-        }
-
-        setWaiting(true);
-        const res = await startField(conflict.id, current);
-        await handleResponse(res);
-      } catch (e) {
-        showAlert('오류', String(e));
-      } finally {
-        setWaiting(false);
-      }
-    })();
-  }, [conflict, session, handleResponse]);
+    loadConversation();
+  }, [conflict, session, loadConversation]);
 
   const send = async (answer: string, selections: string[][] | null = null) => {
     if (!conflict || waiting) return;
+    // 전송 실패 시 복원할 스냅샷 — 낙관적으로 말풍선을 추가하고 입력을 비우기 전에 떠둔다
+    const snapshot = {
+      field,
+      text,
+      groups,
+      groupSelections,
+      customChoices,
+      showTextInput,
+      bubbleCount: bubbles.length,
+    };
     setBubbles((prev) => [...prev, { role: 'user', content: answer, selections }]);
     setGroups(null);
     setGroupSelections([]);
@@ -235,7 +266,15 @@ export default function Input() {
       const res = await answerField(conflict.id, field, answer, selections);
       await handleResponse(res);
     } catch (e) {
-      showAlert('오류', String(e));
+      // 낙관적으로 붙인 내 말풍선을 걷어내고, 적었던 답(자유 입력/선택지)을 그대로 복원한다
+      setBubbles((prev) => prev.slice(0, snapshot.bubbleCount));
+      setField(snapshot.field);
+      setText(snapshot.text);
+      setGroups(snapshot.groups);
+      setGroupSelections(snapshot.groupSelections);
+      setCustomChoices(snapshot.customChoices);
+      setShowTextInput(snapshot.showTextInput);
+      showAlert('전송하지 못했어요', friendlyErrorMessage(e));
     } finally {
       setWaiting(false);
     }
@@ -270,7 +309,9 @@ export default function Input() {
       const res = await startField(conflict.id, target);
       await handleResponse(res);
     } catch (e) {
-      showAlert('오류', String(e));
+      showAlert('다시 시작하지 못했어요', friendlyErrorMessage(e));
+      // 입력 수단이 사라진 채 남지 않도록 서버 상태 기준으로 화면을 되살린다
+      await loadConversation();
     } finally {
       setWaiting(false);
     }
@@ -335,7 +376,12 @@ export default function Input() {
       <Wash height={180} />
       {/* 상단 내비 — ← + 얇은 진행 바 + 다시 시작 (EMBr 온보딩 상단 바) */}
       <View style={styles.topNav}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+        >
           <Text style={styles.back}>←</Text>
         </Pressable>
         <View style={styles.progressWrap}>
@@ -349,12 +395,16 @@ export default function Input() {
           onPress={() => restartFrom(FIELD_ORDER[0])}
           disabled={waiting}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="처음부터 다시 시작하기"
         >
           <Text style={[styles.restartAll, waiting && styles.chipDisabledText]}>
             처음부터
           </Text>
         </Pressable>
       </View>
+      {/* 중간에 나가도 데이터가 날아가지 않는다는 안심 문구 — 뒤로가기 불안 완화 */}
+      <Text style={styles.saveHint}>나가도 진행 상황은 저장돼요</Text>
       {/* 항목 네비게이터 — 이미 지나온 항목을 탭하면 그 항목부터 다시 답할 수 있다 */}
       <ScrollView
         horizontal
@@ -370,6 +420,11 @@ export default function Input() {
               key={f}
               disabled={!isPast || waiting}
               onPress={() => restartFrom(f)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPast ? `${FIELD_LABELS[f]} 항목으로 되돌아가기` : `${FIELD_LABELS[f]} 항목`
+              }
+              accessibilityState={{ disabled: !isPast || waiting, selected: isCurrent }}
               style={[
                 styles.chip,
                 isCurrent && {
@@ -451,6 +506,21 @@ export default function Input() {
           </View>
         ) : null}
 
+        {!waiting && loadError ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{loadError}</Text>
+            <Pressable
+              onPress={loadConversation}
+              style={styles.retryButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="다시 시도"
+            >
+              <Text style={styles.retryText}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {!waiting && groups?.length ? (
           <>
             {groups.map((g, gi) => {
@@ -499,7 +569,12 @@ export default function Input() {
                         onChangeText={(t) => setDirectInputText((prev) => ({ ...prev, [gi]: t }))}
                         onSubmitEditing={() => addCustomChoice(gi)}
                       />
-                      <Pressable onPress={() => addCustomChoice(gi)} style={styles.groupDirectAdd}>
+                      <Pressable
+                        onPress={() => addCustomChoice(gi)}
+                        style={styles.groupDirectAdd}
+                        accessibilityRole="button"
+                        accessibilityLabel="직접 입력한 답 추가"
+                      >
                         <Text style={styles.groupDirectAddText}>추가</Text>
                       </Pressable>
                     </View>
@@ -508,6 +583,8 @@ export default function Input() {
                       onPress={() => setDirectInputOpen((prev) => ({ ...prev, [gi]: true }))}
                       style={styles.groupDirectToggle}
                       hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${g.label}에 직접 입력하기`}
                     >
                       <Text style={styles.groupDirectToggleText}>+ 직접 입력</Text>
                     </Pressable>
@@ -519,6 +596,9 @@ export default function Input() {
               <Pressable
                 onPress={onSubmitGroups}
                 disabled={!canSubmitGroups}
+                accessibilityRole="button"
+                accessibilityLabel="선택 완료"
+                accessibilityState={{ disabled: !canSubmitGroups }}
                 style={[styles.groupSubmit, !canSubmitGroups && styles.groupSubmitDisabled]}
               >
                 <Text
@@ -551,6 +631,9 @@ export default function Input() {
             style={[styles.sendButton, !text.trim() && styles.sendDisabled]}
             onPress={() => text.trim() && send(text.trim())}
             disabled={!text.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="보내기"
+            accessibilityState={{ disabled: !text.trim() }}
           >
             <Text style={styles.sendText}>↑</Text>
           </Pressable>
@@ -567,10 +650,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     paddingHorizontal: 24,
-    marginBottom: 14,
+    marginBottom: 4,
   },
   back: { fontSize: 20, color: colors.ink },
   progressWrap: { flex: 1 },
+  saveHint: {
+    fontSize: 11,
+    color: colors.ink3,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginBottom: 10,
+    opacity: 0.9,
+  },
   restartAll: {
     fontSize: 13,
     color: colors.ink2,
@@ -600,6 +691,22 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   typingText: { fontSize: 13, color: colors.ink3, fontFamily: fonts.body },
+  errorBox: {
+    paddingLeft: 36,
+    marginTop: 12,
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  errorText: { fontSize: 13, lineHeight: 20, color: colors.ink2, fontFamily: fonts.body },
+  retryButton: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.bgCard,
+  },
+  retryText: { fontSize: 13, color: colors.ink, fontFamily: fonts.bodyMedium },
   groupLabel: {
     fontSize: 12,
     color: colors.ink3,

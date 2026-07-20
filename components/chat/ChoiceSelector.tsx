@@ -23,6 +23,9 @@ interface ChoiceSelectorProps {
   groupMode?: boolean;
   // 여러 그룹을 모아 쓸 때 자체 제출/직접입력 행을 숨기고 싶으면 false (상위가 공용으로 하나만 그림)
   showFooter?: boolean;
+  // 복수 선택에서 "선택 완료"를 누르기 위한 최소 선택 수 (기본 1 — 기존 동작 유지).
+  // 0이면 아무것도 고르지 않고도 넘어갈 수 있다 (선택 사항인 단계용).
+  minSelected?: number;
 }
 
 export function ChoiceSelector({
@@ -38,8 +41,10 @@ export function ChoiceSelector({
   interactive = true,
   groupMode = false,
   showFooter = true,
+  minSelected = 1,
 }: ChoiceSelectorProps) {
   const theme = userTheme(color);
+  const submitDisabled = selectedValues.length < minSelected;
   return (
     <View style={styles.wrap}>
       {choices.map((choice) => {
@@ -51,6 +56,8 @@ export function ChoiceSelector({
               interactive && (multiple || groupMode ? onToggle?.(choice) : onSelect(choice))
             }
             disabled={!interactive}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
             style={[
               styles.choice,
               isSelected && styles.choiceSelected,
@@ -58,7 +65,7 @@ export function ChoiceSelector({
             ]}
           >
             <Text style={[styles.choiceText, isSelected && styles.choiceTextSelected]}>
-              {choice}
+              {isSelected ? `✓ ${choice}` : choice}
             </Text>
           </Pressable>
         );
@@ -68,13 +75,15 @@ export function ChoiceSelector({
         : multiple ? (
         <Pressable
           onPress={onSubmit}
-          disabled={selectedValues.length === 0}
+          disabled={submitDisabled}
           style={styles.submit}
+          accessibilityRole="button"
+          accessibilityLabel="선택 완료"
         >
           <Text
             style={[
               styles.submitText,
-              { color: selectedValues.length === 0 ? colors.ink3 : theme.text },
+              { color: submitDisabled ? colors.ink3 : theme.text },
             ]}
           >
             선택 완료
