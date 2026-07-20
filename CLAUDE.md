@@ -46,7 +46,12 @@ These two values are also in `.env.local` (gitignored) — recorded here too sin
 
 - **Frontend**: React Native (Expo, Expo Router) — screens under `app/`, state via Zustand
 - **Backend**: Supabase (PostgreSQL + Realtime + Auth + Storage + Edge Functions)
-- **AI**: OpenAI API (`gpt-4o`) — called **server-side only** via Supabase Edge Functions; `OPENAI_API_KEY` must never reach the client. AGENT.md §1 originally specified Anthropic Claude (`claude-sonnet-4-6`); switched to OpenAI because the Anthropic account ran out of credits mid-build. The system prompts in `prompts/` are provider-agnostic and didn't need to change — only the Edge Function client code (`supabase/functions/_shared/utils.ts` + the three function `index.ts` files) and `lib/ai.ts`'s doc comment. Switch back by reverting those files if Anthropic credits are restored.
+- **AI**: called **server-side only** via Supabase Edge Functions; provider API keys must never reach the client. AGENT.md §1 originally specified Anthropic Claude (`claude-sonnet-4-6`); switched to OpenAI mid-build after the Anthropic account ran out of credits. **Now provider-agnostic**: `supabase/functions/_shared/utils.ts` exposes a `chat({systemStable, system, messages, maxTokens, json, tier})` wrapper that dispatches to **either** OpenAI or Anthropic based on the `AI_PROVIDER` secret (default `openai`). All five functions call `chat()`; the system prompts in `prompts/` never changed (provider-agnostic). To switch providers, just set the credited key and flip the secret — no code change, no redeploy:
+  - `npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-... AI_PROVIDER=anthropic` (or `AI_PROVIDER=openai` to go back)
+  - **Per-stage model tiering**: `chat()`'s `tier` picks `cheap` vs `quality`. Defaults — OpenAI `gpt-4o-mini`/`gpt-4o`, Anthropic `claude-haiku-4-5`/`claude-sonnet-5` — each overridable via `AI_MODEL_<PROVIDER>_<TIER>` secrets (e.g. `AI_MODEL_ANTHROPIC_QUALITY=claude-opus-4-8`). `ai-input`/`ai-history`/`ai-reference-bank` use `cheap` (judgment/extraction, the bulk of tokens); `ai-letters`/`ai-mission` use `quality` (final artifacts).
+  - **Prompt caching**: `chat()`'s `systemStable` prefix is marked `cache_control` for Anthropic (OpenAI auto-caches prefixes). `cacheableSystem(template, marker, value)` splits a prompt at its data placeholder. `ai-input` caches its constant rules preamble across every call/user (the dominant cost driver); letters/mission cache their instruction prefix.
+  - **Per-맺음 token measurement**: every AI call logs `[usage] {..., provider, model, prompt, completion, total}` to the Function logs (grep `[usage]`), so real per-conflict cost is measurable rather than estimated.
+  - ⚠️ The Anthropic path + caching hit-rate were code-complete and deployed but **not yet live-verified** (both providers were unusable at build time: OpenAI quota exhausted, no Anthropic key). Smoke-test one full 맺음 after setting a credited key.
 - **Push**: Expo Notifications
 
 ## Architecture Overview
@@ -79,7 +84,7 @@ Key mechanics:
 
 ## Known deviations from AGENT.md
 
-- **AI provider is OpenAI (`gpt-4o`), not Anthropic Claude.** See Tech Stack above for why and how to revert.
+- **AI is provider-agnostic (OpenAI or Anthropic via the `AI_PROVIDER` secret), default OpenAI.** See Tech Stack above for the switch/tiering/caching details.
 - Stage-02 responses are non-streaming: the AI returns a whole JSON envelope, so partial streaming has nothing useful to render.
 - `waiting.tsx`/`mission.tsx` add a polling fallback next to Realtime subscriptions.
 - Edge Functions were verified live against the deployed project (see below), not via `supabase functions serve` — Deno isn't installed on this machine.
