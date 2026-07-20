@@ -1,34 +1,122 @@
-// Edge Function 공용 헬퍼 — OpenAI/Supabase 클라이언트, JSON 파싱, 푸시 알림
+// Edge Function 공용 헬퍼 — AI provider 추상화, Supabase 클라이언트, JSON 파싱, 푸시 알림
 import OpenAI from "npm:openai";
+import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// AI 제공자: OpenAI (원래 AGENT.md §1은 Anthropic Claude였으나 계정 크레딧 문제로 전환)
-export const AI_MODEL = "gpt-4o";
+// ── AI provider 선택 ──────────────────────────────────────────────
+// AI_PROVIDER secret으로 OpenAI ↔ Anthropic(Claude)을 전환한다 (기본 openai).
+// 크레딧이 있는 쪽으로 secret만 바꾸면 그 provider로 즉시 전환된다:
+//   npx supabase secrets set AI_PROVIDER=anthropic
+// 모델은 AI_MODEL_OPENAI / AI_MODEL_ANTHROPIC secret으로 덮어쓸 수 있다.
+// 각 provider는 자기 키(OPENAI_API_KEY / ANTHROPIC_API_KEY)만 있으면 되고,
+// 프롬프트(prompts/*.ts)는 provider-agnostic이라 그대로 쓴다.
+export type AiProvider = "openai" | "anthropic";
 
-export function openaiClient(): OpenAI {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-  // 동시 접속 시 429(rate limit)가 그대로 사용자 실패로 노출되지 않도록
-  // SDK 내장 지수 백오프 재시도 + 요청 타임아웃을 켠다.
-  // Edge Function wall-clock 한도(150s) 안에서 재시도까지 끝나도록 잡은 값.
-  return new OpenAI({ apiKey, maxRetries: 3, timeout: 45_000 });
+export function aiProvider(): AiProvider {
+  return Deno.env.get("AI_PROVIDER") === "anthropic" ? "anthropic" : "openai";
 }
 
-// OpenAI 응답의 토큰 사용량을 구조화 로그로 남긴다 (Supabase Function 로그에서
-// "[usage]"로 grep 가능). label은 호출 지점(예: "ai-input:trigger_moment"),
-// conflictId로 한 맺음의 총 사용량을 합산할 수 있다.
-// 반환값(total_tokens)을 호출부에서 누적하면 맺음당 합계도 낼 수 있다.
-export function logUsage(
-  label: string,
-  conflictId: string | undefined,
-  res: { usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null },
-): number {
+const DEFAULT_MODEL: Record<AiProvider, string> = {
+  openai: "gpt-4o",
+  anthropic: "claude-opus-4-8",
+};
+
+export function aiModel(): string {
+  const provider = aiProvider();
+  return (
+    Deno.env.get(provider === "anthropic" ? "AI_MODEL_ANTHROPIC" : "AI_MODEL_OPENAI") ??
+    DEFAULT_MODEL[provider]
+  );
+}
+
+// 하위 호환용 상수 — 로그 표기에만 쓴다 (실제 모델은 aiModel()이 결정).
+export const AI_MODEL = "provider-selected";
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface ChatResult {
+  text: string;
+  usage: { prompt: number; completion: number; total: number };
+  model: string;
+}
+
+// provider-중립 채팅 호출. 시스템 프롬프트는 system으로 분리해서 넘긴다
+// (OpenAI는 messages[0]에 role:system으로 합치고, Anthropic은 별도 system 파라미터로 보낸다).
+// json=true면 OpenAI는 response_format:json_object를 켠다 (Anthropic은 프롬프트로 유도 —
+// 우리 프롬프트가 이미 "JSON으로만 응답"을 지시하고 parseModelJson이 방어한다).
+// messages는 system을 제외한 대화 배열(user/assistant 교대).
+export async function chat(opts: {
+  system: string;
+  messages: ChatMessage[];
+  maxTokens: number;
+  json?: boolean;
+}): Promise<ChatResult> {
+  const model = aiModel();
+  if (aiProvider() === "anthropic") {
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+    const client = new Anthropic({ apiKey, maxRetries: 3, timeout: 60_000 });
+    const res = await client.messages.create({
+      model,
+      max_tokens: opts.maxTokens,
+      system: opts.system,
+      messages: opts.messages.map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })),
+    });
+    // 첫 text 블록을 꺼낸다 (thinking이 켜진 모델은 text가 첫 블록이 아닐 수 있음).
+    const textBlock = res.content.find((b) => b.type === "text") as
+      | { type: "text"; text: string }
+      | undefined;
+    return {
+      text: (textBlock?.text ?? "").trim(),
+      usage: {
+        prompt: res.usage.input_tokens,
+        completion: res.usage.output_tokens,
+        total: res.usage.input_tokens + res.usage.output_tokens,
+      },
+      model,
+    };
+  }
+  // OpenAI
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+  const client = new OpenAI({ apiKey, maxRetries: 3, timeout: 45_000 });
+  const res = await client.chat.completions.create({
+    model,
+    max_tokens: opts.maxTokens,
+    ...(opts.json ? { response_format: { type: "json_object" as const } } : {}),
+    messages: [
+      { role: "system" as const, content: opts.system },
+      ...opts.messages.map((m) => ({
+        role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
+        content: m.content,
+      })),
+    ],
+  });
   const u = res.usage;
-  const prompt = u?.prompt_tokens ?? 0;
-  const completion = u?.completion_tokens ?? 0;
-  const total = u?.total_tokens ?? prompt + completion;
+  return {
+    text: (res.choices[0]?.message?.content ?? "").trim(),
+    usage: {
+      prompt: u?.prompt_tokens ?? 0,
+      completion: u?.completion_tokens ?? 0,
+      total: u?.total_tokens ?? (u?.prompt_tokens ?? 0) + (u?.completion_tokens ?? 0),
+    },
+    model,
+  };
+}
+
+// chat() 결과의 토큰 사용량을 구조화 로그로 남긴다 (Supabase Function 로그에서
+// "[usage]"로 grep 가능). label은 호출 지점(예: "ai-input:trigger_moment"),
+// conflictId로 한 맺음의 총 사용량을 합산할 수 있다. 반환값(total)을 누적하면 맺음당 합계.
+export function logUsage(label: string, conflictId: string | undefined, res: ChatResult): number {
+  const { prompt, completion, total } = res.usage;
   console.log(
-    `[usage] ${JSON.stringify({ label, conflict_id: conflictId ?? null, model: AI_MODEL, prompt, completion, total })}`,
+    `[usage] ${JSON.stringify({ label, conflict_id: conflictId ?? null, provider: aiProvider(), model: res.model, prompt, completion, total })}`,
   );
   return total;
 }

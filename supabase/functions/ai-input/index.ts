@@ -16,10 +16,9 @@
 // 후 ai-letters를 백그라운드 호출한다.
 // 호출자의 relationship_profiles(있다면)를 조회해 개인화된 선택지 생성에 참고시킨다.
 import {
-  openaiClient,
+  chat,
   adminClient,
   userClient,
-  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -390,9 +389,7 @@ async function generateEnvelope(
   // 채팅 재질문은 지연이 중요 — json_object 응답 형식으로 파싱 비용 최소화.
   // json_object 모드는 유효한 JSON만 보장할 뿐 스키마/규칙 준수는 보장하지 않으므로,
   // 룰 기반 검증(envelopeViolation)에 걸리면 위반 사유를 붙여 재생성을 요구한다.
-  const openai = openaiClient();
-  const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: system },
+  const baseMessages: { role: "user" | "assistant"; content: string }[] = [
     { role: "user", content: userMessage },
   ];
   // 재시도는 1회로 제한 — 시도마다 사용자 대기 시간이 통째로 늘어난다
@@ -417,14 +414,9 @@ async function generateEnvelope(
                 "field_complete가 true라면 extracted_value를 반드시 채워야 합니다.",
             },
           ];
-    const response = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      response_format: { type: "json_object" },
-      messages,
-    });
+    const response = await chat({ system, messages, maxTokens: 1024, json: true });
     logUsage(`ai-input:${field.key}`, ctx.conflictId, response);
-    const content = response.choices[0]?.message?.content;
+    const content = response.text;
     if (!content) throw new Error("no content in response");
     lastContent = content;
     envelope = normalizeEnvelope(content);

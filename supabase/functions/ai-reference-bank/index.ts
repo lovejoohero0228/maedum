@@ -3,10 +3,9 @@
 // 요청: { profile_id } — 호출자 본인 소유의 relationship_profiles.id
 // → OpenAI로 reference_bank 생성 → relationship_profiles 갱신
 import {
-  openaiClient,
+  chat,
   adminClient,
   userClient,
-  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -55,19 +54,14 @@ Deno.serve(async (req) => {
       2,
     );
 
-    const openai = openaiClient();
-    const res = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 2048,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: REFERENCE_BANK_SYSTEM.replace("{relationship_context}", context) },
-        { role: "user", content: "레퍼런스 뱅크를 생성해주세요." },
-      ],
+    const res = await chat({
+      system: REFERENCE_BANK_SYSTEM.replace("{relationship_context}", context),
+      messages: [{ role: "user", content: "레퍼런스 뱅크를 생성해주세요." }],
+      maxTokens: 2048,
+      json: true,
     });
-
     logUsage("ai-reference-bank", undefined, res);
-    const content = res.choices[0]?.message?.content;
+    const content = res.text;
     if (!content) throw new Error("no reference bank text");
     const bank = parseModelJson<Partial<ReferenceBank>>(content);
     if (

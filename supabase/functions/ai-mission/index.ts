@@ -3,10 +3,9 @@
 // 요청: { conflict_id }
 // → mission_a/b + convo_guide 생성 → conflict_outputs 갱신 → status 'mission_unlocked' → 푸시
 import {
-  openaiClient,
+  chat,
   adminClient,
   userClient,
-  AI_MODEL,
   corsHeaders,
   json,
   parseModelJson,
@@ -195,9 +194,8 @@ Deno.serve(async (req) => {
       2,
     );
 
-    const openai = openaiClient();
-    const baseMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-      { role: "system", content: MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context) },
+    const missionSystem = MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context);
+    const baseMessages: { role: "user" | "assistant"; content: string }[] = [
       { role: "user", content: "화해 미션 페이퍼를 생성해주세요." },
     ];
     const contextNorm = context.replace(/\s+/g, "");
@@ -219,14 +217,9 @@ Deno.serve(async (req) => {
                   "같은 내용을 유지하되 위반만 고친 완전한 JSON으로 다시 응답하세요.",
               },
             ];
-      const res = await openai.chat.completions.create({
-        model: AI_MODEL,
-        max_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages,
-      });
+      const res = await chat({ system: missionSystem, messages, maxTokens: 4096, json: true });
       logUsage("ai-mission", conflict_id, res);
-      const content = res.choices[0]?.message?.content;
+      const content = res.text;
       if (!content) throw new Error("no mission text");
       lastContent = content;
       const parsed = parseModelJson<Partial<MissionResult>>(content);

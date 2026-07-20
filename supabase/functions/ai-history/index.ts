@@ -6,10 +6,9 @@
 // - 지난 기록 화면 진입 시에도 호출 (요약 도입 전의 기존 resolved 기록 소급 통합)
 // - 통합할 것이 없으면 no-op — 반복 호출에 안전(멱등)
 import {
-  openaiClient,
+  chat,
   adminClient,
   userClient,
-  AI_MODEL,
   corsHeaders,
   json,
   errorMessage,
@@ -57,7 +56,6 @@ Deno.serve(async (req) => {
     const nameOf = (userId: string) =>
       profiles?.find((p) => p.id === userId)?.display_name ?? "상대";
 
-    const openai = openaiClient();
     let summary: string = couple!.history_summary ?? "";
     let merged = 0;
 
@@ -93,16 +91,13 @@ Deno.serve(async (req) => {
           "{existing_summary}",
           summary || "(없음)",
         ).replace("{new_record}", record);
-        const res = await openai.chat.completions.create({
-          model: AI_MODEL,
-          max_tokens: 1024,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: "갱신된 누적 요약을 작성해주세요." },
-          ],
+        const res = await chat({
+          system,
+          messages: [{ role: "user", content: "갱신된 누적 요약을 작성해주세요." }],
+          maxTokens: 1024,
         });
         logUsage("ai-history", conflict.id, res);
-        const text = res.choices[0]?.message?.content?.trim();
+        const text = res.text;
         if (!text) throw new Error("no summary text");
         summary = text;
         merged++;
