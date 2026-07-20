@@ -378,7 +378,13 @@ async function generateEnvelope(
     `${completedSummary ? `[이전에 완료된 항목들 — 최종 확정값]\n${completedSummary}\n\n` : ""}` +
     `${freeTextAnswers ? `[이전 항목들에서 사용자가 직접 쓴 자유서술 답변 원문 — 힌트 소스]\n${freeTextAnswers}\n\n` : ""}` +
     `[이번 항목("${field.label}") 진행 중인 대화]\n${currentFieldTurns || "(아직 없음)"}`;
-  const system = INPUT_GUIDE_SYSTEM
+  // 프롬프트 캐싱: 첫 가변 섹션("## 현재 수집 대상 항목") 앞의 고정 규칙 블록
+  // (페르소나·역할·갈등 틀·턴 최소화·공감 톤 — 모든 호출/모든 유저 공통)을 캐시 prefix로,
+  // 그 뒤 커플·필드·대화 맥락(가변)은 비캐시로 분리한다. 템플릿 순서/문구는 그대로 유지.
+  const CTX_MARKER = "## 현재 수집 대상 항목";
+  const ctxIdx = INPUT_GUIDE_SYSTEM.indexOf(CTX_MARKER);
+  const systemStable = ctxIdx === -1 ? "" : INPUT_GUIDE_SYSTEM.slice(0, ctxIdx);
+  const systemVolatile = (ctxIdx === -1 ? INPUT_GUIDE_SYSTEM : INPUT_GUIDE_SYSTEM.slice(ctxIdx))
     .replace("{current_field}", `${field.label} (${field.key}) — ${field.goal}`)
     .replace("{relationship_context}", relationshipContext)
     .replace("{field_choice_bank}", fieldChoiceBank(field.key, referenceBank))
@@ -414,7 +420,14 @@ async function generateEnvelope(
                 "field_complete가 true라면 extracted_value를 반드시 채워야 합니다.",
             },
           ];
-    const response = await chat({ system, messages, maxTokens: 1024, json: true });
+    const response = await chat({
+      systemStable,
+      system: systemVolatile,
+      messages,
+      maxTokens: 1024,
+      json: true,
+      tier: "cheap",
+    });
     logUsage(`ai-input:${field.key}`, ctx.conflictId, response);
     const content = response.text;
     if (!content) throw new Error("no content in response");

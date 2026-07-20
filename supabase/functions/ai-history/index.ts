@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
           system,
           messages: [{ role: "user", content: "갱신된 누적 요약을 작성해주세요." }],
           maxTokens: 1024,
+          tier: "cheap",
         });
         logUsage("ai-history", conflict.id, res);
         const text = res.text;

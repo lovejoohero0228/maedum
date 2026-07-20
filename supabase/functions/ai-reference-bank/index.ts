@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
       messages: [{ role: "user", content: "레퍼런스 뱅크를 생성해주세요." }],
       maxTokens: 2048,
       json: true,
+      tier: "cheap",
     });
     logUsage("ai-reference-bank", undefined, res);
     const content = res.text;

@@ -7,6 +7,7 @@
 // → conflict_outputs 저장 → status 'letters_delivered' → 양쪽 푸시
 import {
   chat,
+  cacheableSystem,
   adminClient,
   userClient,
   corsHeaders,
@@ -133,14 +134,17 @@ Deno.serve(async (req) => {
 
     // 편지: 발신자 입력 → 수신자가 읽는 텍스트 (AGENT.md 스키마 주석: letter_a_to_b = A→B)
     async function refineLetter(senderInput: InputRow, senderName: string, receiverName: string) {
-      const system = LETTER_REFINE_SYSTEM.replace(
+      const { systemStable, system } = cacheableSystem(
+        LETTER_REFINE_SYSTEM,
         "{input_data}",
         inputSummary(senderInput, senderName, receiverName),
       );
       const res = await chat({
+        systemStable,
         system,
         messages: [{ role: "user", content: "상대에게 전달할 편지를 작성해주세요." }],
         maxTokens: 2048,
+        tier: "quality",
       });
       logUsage(`ai-letters:letter:${senderName}`, conflict_id, res);
       const text = res.text;
@@ -154,12 +158,14 @@ Deno.serve(async (req) => {
         ? `\n\n## 지난 맺음 누적 요약 (반복 패턴 참고용)\n${couple.history_summary}`
         : "";
       const both = `## A (${profileA.display_name})\n${inputSummary(inputA, profileA.display_name, profileB.display_name)}\n\n## B (${profileB.display_name})\n${inputSummary(inputB, profileB.display_name, profileA.display_name)}${historySection}`;
-      const system = ANALYSIS_SYSTEM.replace("{both_inputs}", both);
+      const { systemStable, system } = cacheableSystem(ANALYSIS_SYSTEM, "{both_inputs}", both);
       const res = await chat({
+        systemStable,
         system,
         messages: [{ role: "user", content: "두 사람의 갈등 구조를 분석해주세요." }],
         maxTokens: 4096,
         json: true,
+        tier: "quality",
       });
       logUsage("ai-letters:analysis", conflict_id, res);
       const content = res.text;

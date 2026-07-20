@@ -11,22 +11,26 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // 각 provider는 자기 키(OPENAI_API_KEY / ANTHROPIC_API_KEY)만 있으면 되고,
 // 프롬프트(prompts/*.ts)는 provider-agnostic이라 그대로 쓴다.
 export type AiProvider = "openai" | "anthropic";
+// 단계별 모델 티어 — 판단/추출류(ai-input, 요약, 뱅크)는 cheap, 최종 결과물
+// (편지/분석/미션)은 quality. 맺음 비용의 70~80%인 ai-input을 저렴한 모델로 내려
+// 품질 손실 없이 비용을 크게 줄인다.
+export type AiTier = "cheap" | "quality";
 
 export function aiProvider(): AiProvider {
   return Deno.env.get("AI_PROVIDER") === "anthropic" ? "anthropic" : "openai";
 }
 
-const DEFAULT_MODEL: Record<AiProvider, string> = {
-  openai: "gpt-4o",
-  anthropic: "claude-opus-4-8",
+const DEFAULT_MODEL: Record<AiProvider, Record<AiTier, string>> = {
+  openai: { cheap: "gpt-4o-mini", quality: "gpt-4o" },
+  anthropic: { cheap: "claude-haiku-4-5", quality: "claude-sonnet-5" },
 };
 
-export function aiModel(): string {
+// 모델 결정: AI_MODEL_<PROVIDER>_<TIER> secret이 있으면 그것, 없으면 기본값.
+// (예: AI_MODEL_ANTHROPIC_QUALITY=claude-opus-4-8 로 편지/미션만 상위 모델로)
+export function aiModel(tier: AiTier): string {
   const provider = aiProvider();
-  return (
-    Deno.env.get(provider === "anthropic" ? "AI_MODEL_ANTHROPIC" : "AI_MODEL_OPENAI") ??
-    DEFAULT_MODEL[provider]
-  );
+  const envKey = `AI_MODEL_${provider.toUpperCase()}_${tier.toUpperCase()}`;
+  return Deno.env.get(envKey) ?? DEFAULT_MODEL[provider][tier];
 }
 
 // 하위 호환용 상수 — 로그 표기에만 쓴다 (실제 모델은 aiModel()이 결정).
@@ -43,26 +47,59 @@ export interface ChatResult {
   model: string;
 }
 
-// provider-중립 채팅 호출. 시스템 프롬프트는 system으로 분리해서 넘긴다
-// (OpenAI는 messages[0]에 role:system으로 합치고, Anthropic은 별도 system 파라미터로 보낸다).
-// json=true면 OpenAI는 response_format:json_object를 켠다 (Anthropic은 프롬프트로 유도 —
-// 우리 프롬프트가 이미 "JSON으로만 응답"을 지시하고 parseModelJson이 방어한다).
+// 프롬프트를 "고정 지시문 prefix(캐시) + 가변 데이터(비캐시)"로 쪼갠다.
+// 템플릿의 데이터 플레이스홀더(marker) 앞부분은 모든 호출에서 동일하므로 캐시 대상이 되고,
+// 뒤부분(데이터가 채워진 곳)만 매번 바뀐다. chat()의 systemStable/system에 그대로 넘긴다.
+export function cacheableSystem(
+  template: string,
+  marker: string,
+  value: string,
+): { systemStable: string; system: string } {
+  const idx = template.indexOf(marker);
+  if (idx === -1) return { systemStable: template.replace(marker, value), system: "" };
+  return {
+    systemStable: template.slice(0, idx),
+    system: template.slice(idx).replace(marker, value),
+  };
+}
+
+// provider-중립 채팅 호출.
+// - systemStable: 모든 호출에서 동일한 고정 지시문 → Anthropic에서 prompt caching(cache_control)
+//   대상으로 표시한다 (OpenAI는 프리픽스 자동 캐싱이라 별도 표시 불필요, 단순 연결).
+// - system: 이번 호출에서만 바뀌는 가변 부분(데이터/맥락).
+// - tier: cheap|quality 모델 선택.
+// - json=true면 OpenAI는 response_format:json_object를 켠다 (Anthropic은 프롬프트로 유도 —
+//   프롬프트가 이미 "JSON으로만 응답"을 지시하고 parseModelJson이 방어한다).
 // messages는 system을 제외한 대화 배열(user/assistant 교대).
 export async function chat(opts: {
+  systemStable?: string;
   system: string;
   messages: ChatMessage[];
   maxTokens: number;
   json?: boolean;
+  tier?: AiTier;
 }): Promise<ChatResult> {
-  const model = aiModel();
+  const model = aiModel(opts.tier ?? "quality");
+  const fullSystem = (opts.systemStable ?? "") + opts.system;
   if (aiProvider() === "anthropic") {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
     const client = new Anthropic({ apiKey, maxRetries: 3, timeout: 60_000 });
+    // 고정 prefix는 cache_control로 캐시, 가변부는 뒤에 붙인다 (prefix 매치 캐싱).
+    const systemParam = opts.systemStable
+      ? [
+          {
+            type: "text" as const,
+            text: opts.systemStable,
+            cache_control: { type: "ephemeral" as const },
+          },
+          ...(opts.system ? [{ type: "text" as const, text: opts.system }] : []),
+        ]
+      : fullSystem;
     const res = await client.messages.create({
       model,
       max_tokens: opts.maxTokens,
-      system: opts.system,
+      system: systemParam,
       messages: opts.messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
@@ -72,17 +109,18 @@ export async function chat(opts: {
     const textBlock = res.content.find((b) => b.type === "text") as
       | { type: "text"; text: string }
       | undefined;
+    const cacheRead = (res.usage as { cache_read_input_tokens?: number }).cache_read_input_tokens ?? 0;
     return {
       text: (textBlock?.text ?? "").trim(),
       usage: {
-        prompt: res.usage.input_tokens,
+        prompt: res.usage.input_tokens + cacheRead,
         completion: res.usage.output_tokens,
-        total: res.usage.input_tokens + res.usage.output_tokens,
+        total: res.usage.input_tokens + cacheRead + res.usage.output_tokens,
       },
       model,
     };
   }
-  // OpenAI
+  // OpenAI (프리픽스 자동 캐싱 — systemStable/system을 하나로 합쳐 보낸다)
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
   const client = new OpenAI({ apiKey, maxRetries: 3, timeout: 45_000 });
@@ -91,7 +129,7 @@ export async function chat(opts: {
     max_tokens: opts.maxTokens,
     ...(opts.json ? { response_format: { type: "json_object" as const } } : {}),
     messages: [
-      { role: "system" as const, content: opts.system },
+      { role: "system" as const, content: fullSystem },
       ...opts.messages.map((m) => ({
         role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
         content: m.content,

@@ -4,6 +4,7 @@
 // → mission_a/b + convo_guide 생성 → conflict_outputs 갱신 → status 'mission_unlocked' → 푸시
 import {
   chat,
+  cacheableSystem,
   adminClient,
   userClient,
   corsHeaders,
@@ -194,7 +195,11 @@ Deno.serve(async (req) => {
       2,
     );
 
-    const missionSystem = MISSION_SYSTEM.replace("{both_inputs_and_analysis}", context);
+    const { systemStable: missionStable, system: missionContext } = cacheableSystem(
+      MISSION_SYSTEM,
+      "{both_inputs_and_analysis}",
+      context,
+    );
     const baseMessages: { role: "user" | "assistant"; content: string }[] = [
       { role: "user", content: "화해 미션 페이퍼를 생성해주세요." },
     ];
@@ -217,7 +222,14 @@ Deno.serve(async (req) => {
                   "같은 내용을 유지하되 위반만 고친 완전한 JSON으로 다시 응답하세요.",
               },
             ];
-      const res = await chat({ system: missionSystem, messages, maxTokens: 4096, json: true });
+      const res = await chat({
+        systemStable: missionStable,
+        system: missionContext,
+        messages,
+        maxTokens: 4096,
+        json: true,
+        tier: "quality",
+      });
       logUsage("ai-mission", conflict_id, res);
       const content = res.text;
       if (!content) throw new Error("no mission text");
