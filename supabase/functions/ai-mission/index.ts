@@ -75,6 +75,24 @@ function missionViolation(mission: MissionResult, contextNorm: string): string |
       }
     }
   }
+  // 작은 미션은 "오늘 바로 할 말/행동" 제안이지 대사 스크립트가 아니다.
+  // 완성된 대사를 따옴표로 지정하거나 사과를 대신 써주는 것을 금지한다
+  // (사과는 두 사람이 직접 나눌 몫 — AGENT.md 핵심 철학).
+  const smallTexts = [...mission.small_mission_a, ...mission.small_mission_b].map((m) => m.text);
+  for (const t of smallTexts) {
+    if (/['‘"“][^'’"”]{2,}['’"”]/.test(t)) {
+      return (
+        "작은 미션에 따옴표로 완성된 대사를 지정하지 말 것 — 무슨 마음을 전할지만 안내하고 " +
+        "실제 문장은 본인이 쓰게 남긴다"
+      );
+    }
+    if (/(미안|사과|잘못|용서)/.test(t)) {
+      return (
+        "작은 미션이 사과를 유도하고 있음 — 사과는 두 사람이 직접 만나 나눌 몫이므로 " +
+        "작은 미션은 사과가 아니라 마음을 여는 말/행동으로 구성할 것"
+      );
+    }
+  }
   return null;
 }
 
