@@ -232,7 +232,11 @@ Deno.serve(async (req) => {
       });
       logUsage("ai-mission", conflict_id, res);
       const content = res.text;
-      if (!content) throw new Error("no mission text");
+      if (!content) {
+        throw new Error(
+          `no mission text (stop_reason=${res.stopReason}, completion_tokens=${res.usage.completion})`,
+        );
+      }
       lastContent = content;
       const parsed = parseModelJson<Partial<MissionResult>>(content);
       // json_object 모드는 스키마 준수를 보장하지 않으므로 필수 필드 누락을 명시적으로 검증

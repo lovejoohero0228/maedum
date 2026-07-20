@@ -45,6 +45,7 @@ export interface ChatResult {
   text: string;
   usage: { prompt: number; completion: number; total: number };
   model: string;
+  stopReason: string | null;
 }
 
 // 프롬프트를 "고정 지시문 prefix(캐시) + 가변 데이터(비캐시)"로 쪼갠다.
@@ -99,6 +100,10 @@ export async function chat(opts: {
     const res = await client.messages.create({
       model,
       max_tokens: opts.maxTokens,
+      // Claude Sonnet 5 runs adaptive thinking by default when this is omitted,
+      // which can consume the entire max_tokens budget on reasoning and leave
+      // no room for the actual text output. We only want direct output here.
+      thinking: { type: "disabled" },
       system: systemParam,
       messages: opts.messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
@@ -118,6 +123,7 @@ export async function chat(opts: {
         total: res.usage.input_tokens + cacheRead + res.usage.output_tokens,
       },
       model,
+      stopReason: res.stop_reason,
     };
   }
   // OpenAI (프리픽스 자동 캐싱 — systemStable/system을 하나로 합쳐 보낸다)
@@ -145,6 +151,7 @@ export async function chat(opts: {
       total: u?.total_tokens ?? (u?.prompt_tokens ?? 0) + (u?.completion_tokens ?? 0),
     },
     model,
+    stopReason: res.choices[0]?.finish_reason ?? null,
   };
 }
 
@@ -154,7 +161,7 @@ export async function chat(opts: {
 export function logUsage(label: string, conflictId: string | undefined, res: ChatResult): number {
   const { prompt, completion, total } = res.usage;
   console.log(
-    `[usage] ${JSON.stringify({ label, conflict_id: conflictId ?? null, provider: aiProvider(), model: res.model, prompt, completion, total })}`,
+    `[usage] ${JSON.stringify({ label, conflict_id: conflictId ?? null, provider: aiProvider(), model: res.model, prompt, completion, total, stop_reason: res.stopReason })}`,
   );
   return total;
 }
