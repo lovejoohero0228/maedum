@@ -11,6 +11,7 @@ import {
   json,
   parseModelJson,
   errorMessage,
+  logUsage,
   sendPush,
 } from "../_shared/utils.ts";
 import { MISSION_SYSTEM } from "../../../prompts/mission.ts";
@@ -224,6 +225,7 @@ Deno.serve(async (req) => {
         response_format: { type: "json_object" },
         messages,
       });
+      logUsage("ai-mission", conflict_id, res);
       const content = res.choices[0]?.message?.content;
       if (!content) throw new Error("no mission text");
       lastContent = content;

@@ -24,6 +24,7 @@ import {
   json,
   parseModelJson,
   errorMessage,
+  logUsage,
 } from "../_shared/utils.ts";
 import { INPUT_GUIDE_SYSTEM, INPUT_FIELDS } from "../../../prompts/input_guide.ts";
 import type { InputField } from "../../../prompts/input_guide.ts";
@@ -330,6 +331,7 @@ interface GenContext {
   input: Record<string, unknown>;
   relationshipContext: string;
   referenceBank: Record<string, unknown> | null;
+  conflictId?: string;
 }
 
 // 한 필드에 대한 AI 턴 생성 (시스템 프롬프트 조립 + 검증 재시도 루프).
@@ -421,6 +423,7 @@ async function generateEnvelope(
       response_format: { type: "json_object" },
       messages,
     });
+    logUsage(`ai-input:${field.key}`, ctx.conflictId, response);
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error("no content in response");
     lastContent = content;
@@ -558,7 +561,7 @@ Deno.serve(async (req) => {
     const referenceBank = (relationshipProfile?.reference_bank ?? null) as
       | Record<string, unknown>
       | null;
-    const genCtx: GenContext = { chatLog, input, relationshipContext, referenceBank };
+    const genCtx: GenContext = { chatLog, input, relationshipContext, referenceBank, conflictId: conflict_id };
 
     // ── 고정 룰 턴: AI 호출 없이 즉시 처리 (질문/추출 모두 룰이면 이 항목은 토큰 0) ──
     const hasFieldTurns = chatLog.some((e) => e.field === field_key && e.role === "assistant");

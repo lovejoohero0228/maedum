@@ -13,6 +13,7 @@ import {
   corsHeaders,
   json,
   errorMessage,
+  logUsage,
 } from "../_shared/utils.ts";
 import { HISTORY_SUMMARY_SYSTEM } from "../../../prompts/history_summary.ts";
 
@@ -100,6 +101,7 @@ Deno.serve(async (req) => {
             { role: "user", content: "갱신된 누적 요약을 작성해주세요." },
           ],
         });
+        logUsage("ai-history", conflict.id, res);
         const text = res.choices[0]?.message?.content?.trim();
         if (!text) throw new Error("no summary text");
         summary = text;

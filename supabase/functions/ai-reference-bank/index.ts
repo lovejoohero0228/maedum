@@ -11,6 +11,7 @@ import {
   json,
   parseModelJson,
   errorMessage,
+  logUsage,
 } from "../_shared/utils.ts";
 import { REFERENCE_BANK_SYSTEM } from "../../../prompts/reference_bank.ts";
 
@@ -65,6 +66,7 @@ Deno.serve(async (req) => {
       ],
     });
 
+    logUsage("ai-reference-bank", undefined, res);
     const content = res.choices[0]?.message?.content;
     if (!content) throw new Error("no reference bank text");
     const bank = parseModelJson<Partial<ReferenceBank>>(content);

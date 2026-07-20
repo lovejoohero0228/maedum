@@ -14,6 +14,7 @@ import {
   json,
   parseModelJson,
   errorMessage,
+  logUsage,
   sendPush,
 } from "../_shared/utils.ts";
 import { LETTER_REFINE_SYSTEM } from "../../../prompts/letter_refine.ts";
@@ -147,6 +148,7 @@ Deno.serve(async (req) => {
           { role: "user", content: "상대에게 전달할 편지를 작성해주세요." },
         ],
       });
+      logUsage(`ai-letters:letter:${senderName}`, conflict_id, res);
       const text = res.choices[0]?.message?.content;
       if (!text) throw new Error("no letter text");
       return text.trim();
@@ -168,6 +170,7 @@ Deno.serve(async (req) => {
           { role: "user", content: "두 사람의 갈등 구조를 분석해주세요." },
         ],
       });
+      logUsage("ai-letters:analysis", conflict_id, res);
       const content = res.choices[0]?.message?.content;
       if (!content) throw new Error("no analysis text");
       const parsed = parseModelJson<{
